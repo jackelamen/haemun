@@ -29,7 +29,7 @@ function guessCat(wcCategories) {
 function mapWcProduct(p) {
   const minorUnit = p.prices && p.prices.currency_minor_unit != null ? Number(p.prices.currency_minor_unit) : 2;
   const price = p.prices ? Number(p.prices.price) / Math.pow(10, minorUnit) : 0;
-  const images = (p.images || []).map((img) => img.src).filter(Boolean);
+  const images = [...new Set((p.images || []).map((img) => img.src).filter(Boolean))];
   return {
     id: 'wc' + p.id,
     vol: (p.tags || []).some((tg) => /volume/i.test(tg.name)),
