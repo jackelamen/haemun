@@ -27,7 +27,7 @@ function guessCat(wcCategories) {
 // defaults — they're irrelevant anyway once a real photo is present,
 // since mediaHtml() always prefers a real photo over the illustration.
 function mapWcProduct(p) {
-  const minorUnit = (p.prices && p.prices.currency_minor_unit) || 2;
+  const minorUnit = p.prices && p.prices.currency_minor_unit != null ? Number(p.prices.currency_minor_unit) : 2;
   const price = p.prices ? Number(p.prices.price) / Math.pow(10, minorUnit) : 0;
   const images = (p.images || []).map((img) => img.src).filter(Boolean);
   return {

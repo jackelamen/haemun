@@ -167,9 +167,9 @@ button { font-family: inherit; cursor: pointer; color: inherit; background: none
 .f-link { color: #5E5E5B; font-size: 12px; line-height: 2.1; }
 
 .modal-backdrop { position: fixed; inset: 0; z-index: 40; }
-.pdp { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); background: #FFFFFF; }
-.pdp-img { position: relative; }
-.pdp-thumbs { position: absolute; left: 24px; bottom: 24px; display: flex; gap: 8px; }
+.pdp { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); grid-template-rows: 100vh; background: #FFFFFF; }
+.pdp-img { position: relative; height: 100vh; overflow: hidden; }
+.pdp-thumbs { position: absolute; left: 24px; bottom: 24px; z-index: 2; display: flex; gap: 8px; }
 .pdp-thumb { width: 56px; height: 56px; padding: 0; border: 2px solid transparent; overflow: hidden; }
 .pdp-body { display: flex; flex-direction: column; padding: 16px 48px 40px; overflow-y: auto; }
 .pdp-top { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
