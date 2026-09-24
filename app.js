@@ -35,6 +35,12 @@ function shapeSvg(p, label = true) {
     <rect x="0" y="0" width="300" height="400" fill="url(#hmLight)"></rect><rect x="0" y="292" width="300" height="108" fill="url(#hmFloor)"></rect><ellipse cx="150" cy="299" rx="82" ry="9" fill="url(#hmShadow)"></ellipse>${inner}</svg>`;
 }
 
+// Real uploaded photo wins over the drawn placeholder illustration.
+function mediaHtml(p, label = true) {
+  if (p.photo) return `<img src="${esc(p.photo)}" alt="${esc(p.name || '')}" style="width:100%;height:100%;object-fit:cover;display:block">`;
+  return shapeSvg(p, label);
+}
+
 function svgDefs() {
   return `<svg width="0" height="0" aria-hidden="true" style="position:absolute"><defs>
   <radialGradient id="hmLight" cx="50%" cy="30%" r="70%"><stop offset="0" stop-color="#FFFFFF" stop-opacity=".55"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></radialGradient>
@@ -75,7 +81,7 @@ function cardHtml(p, t, h, opts = {}) {
     </div>` : '';
   return `<article class="p-card">
     <button class="p-img" style="height:${h}px;background:${p.bg}" data-action="openProduct" data-id="${p.id}">
-      ${shapeSvg(p)}
+      ${mediaHtml(p)}
       ${num}
       <span class="cap ov-tr">${v.tag}</span>
       <span class="p-alt">${esc(p.teaser)}</span>
@@ -104,7 +110,7 @@ function postCard(j, t, h, big = false) {
   const pr = j.product ? PRODUCTS.find((p) => p.id === j.product) : null;
   const look = pr || j;
   return `<button class="post-card" data-action="openArticle" data-id="${j.id}">
-    <span class="post-img" style="height:${h}px;background:${look.bg}">${shapeSvg(look, false)}</span>
+    <span class="post-img" style="height:${h}px;background:${look.bg}">${mediaHtml(look, false)}</span>
     <span class="cap post-meta"><span class="flex-c">${dotHtml(CAT_COLOR[j.cat] || '#C1272D')}${t.cats[j.cat]}</span><span>${j.date}</span><span>${j.read}</span></span>
     <span class="post-title" style="font-size:${big ? '40px' : '20px'};font-weight:${big ? 300 : 500}">${esc(j.title[state.lang])}</span>
     <span class="post-dek">${esc(j.dek[state.lang])}</span>
@@ -140,7 +146,7 @@ function homeHtml(t) {
   const volProducts = PRODUCTS.filter((p) => p.vol);
   const catTiles = CATS.map((c, i) => {
     const f = PRODUCTS.find((p) => p.cat === c && p.vol) || PRODUCTS.find((p) => p.cat === c);
-    const img = f ? `<span class="cat-img" style="height:420px;background:${f.bg}">${shapeSvg(f, false)}<span class="cap ov-tl">0${i + 1}</span></span>` : `<span class="cat-img" style="height:420px;background:#ECECE9"><span class="cap ov-tl">0${i + 1}</span></span>`;
+    const img = f ? `<span class="cat-img" style="height:420px;background:${f.bg}">${mediaHtml(f, false)}<span class="cap ov-tl">0${i + 1}</span></span>` : `<span class="cat-img" style="height:420px;background:#ECECE9"><span class="cap ov-tl">0${i + 1}</span></span>`;
     return `<button class="cat-tile" data-action="goCat" data-cat="${c}">
       ${img}
       <span class="cat-row"><span class="flex-c" style="font-size:14px;font-weight:500">${dotHtml(CAT_COLOR[c])}${t.cats[c]}</span><span class="mono small muted">${String(PRODUCTS.filter((p) => p.cat === c).length).padStart(2, '0')} →</span></span>
@@ -262,7 +268,7 @@ function journalHtml(t) {
   const rest = jposts.slice(1);
   const featuredHtml = featured ? `
   <section class="featured">
-    <button class="feat-img" style="background:${(PRODUCTS.find((p) => p.id === featured.product) || featured).bg}" data-action="openArticle" data-id="${featured.id}">${shapeSvg(PRODUCTS.find((p) => p.id === featured.product) || featured, false)}</button>
+    <button class="feat-img" style="background:${(PRODUCTS.find((p) => p.id === featured.product) || featured).bg}" data-action="openArticle" data-id="${featured.id}">${mediaHtml(PRODUCTS.find((p) => p.id === featured.product) || featured, false)}</button>
     <div class="feat-text">
       <div class="cap flex-c" style="gap:14px;color:#7A7A78"><span style="color:#C1272D">${t.featuredLabel}</span><span>${t.cats[featured.cat]}</span><span>${featured.date}</span></div>
       <div class="feat-title">${esc(featured.title[state.lang])}</div>
@@ -289,7 +295,7 @@ function articleHtml(t, post) {
   const productBlock = pr ? `
   <div class="art-product-wrap">
     <div class="art-product">
-      <span class="art-p-img" style="background:${pr.bg}">${shapeSvg(pr, false)}</span>
+      <span class="art-p-img" style="background:${pr.bg}">${mediaHtml(pr, false)}</span>
       <div><div class="cap muted">${t.inStory}</div><div style="margin-top:8px;font-size:16px;font-weight:500">${esc(pr.name)}</div><div style="margin-top:4px;font-size:13px;color:#5E5E5B">${sgd(pr.price)}</div></div>
       <button class="btn-outline-dark cap" data-action="openProduct" data-id="${pr.id}">${t.view} →</button>
     </div>
@@ -302,7 +308,7 @@ function articleHtml(t, post) {
       <h1 class="art-title">${esc(post.title[state.lang])}</h1>
       <p class="art-dek">${esc(post.dek[state.lang])}</p>
     </div>
-    <div class="art-hero" style="background:${(pr || post).bg}">${shapeSvg(pr || post, false)}</div>
+    <div class="art-hero" style="background:${(pr || post).bg}">${mediaHtml(pr || post, false)}</div>
     <div class="art-body">
       <div class="cap art-byline">${t.by}<br><span style="color:#0B0B0C">${esc(post.author)}</span></div>
       <div class="art-text">${post.paras.map((p) => `<p>${esc(p)}</p>`).join('')}</div>
@@ -398,7 +404,7 @@ function pdpHtml(t) {
   const qtyBlock = svc ? '' : `<div class="qty"><button data-action="qty" data-delta="-1">−</button><span class="mono">${state.qty}</span><button data-action="qty" data-delta="1">+</button></div>`;
   return `
   <div class="modal-backdrop pdp">
-    <div class="pdp-img" style="background:${raw.bg}">${shapeSvg(raw)}<span class="cap ov-tl">${v.no}</span></div>
+    <div class="pdp-img" style="background:${raw.bg}">${mediaHtml(raw)}<span class="cap ov-tl">${v.no}</span></div>
     <div class="pdp-body">
       <div class="pdp-top"><span class="cap muted">${t.shop} / ${v.catLabel}</span><button class="tlink" data-action="closeProduct">${t.close} ✕</button></div>
       <div class="pdp-origin flex-c">${dotHtml(v.dotColor)}${raw.origin}</div>

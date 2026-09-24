@@ -10,6 +10,25 @@ const stripTags = (html) => String(html || '').replace(/<[^>]*>/g, '').trim();
 // Maps a WordPress "product" post (with ACF fields attached via the
 // rest_prepare_product filter in functions.php) to the shape the frontend
 // expects. Adjust this if you rename or add ACF fields.
+// A real uploaded photo can come from either the post's Featured Image
+// (via _embed) or an ACF image field named "photo" (any of ACF's three
+// return formats: array/object, plain URL string, or attachment ID —
+// an ID alone can't be resolved to a URL without another request, so
+// it's skipped rather than guessed).
+function wpPhotoUrl(post) {
+  const acfPhoto = post.acf && post.acf.photo;
+  if (acfPhoto) {
+    if (typeof acfPhoto === 'string') return acfPhoto;
+    if (acfPhoto.url) return acfPhoto.url;
+  }
+  const media = post._embedded && post._embedded['wp:featuredmedia'] && post._embedded['wp:featuredmedia'][0];
+  if (media && media.source_url) return media.source_url;
+  return null;
+}
+
+// Maps a WordPress "product" post (with ACF fields attached via the
+// rest_prepare_product filter in functions.php) to the shape the frontend
+// expects. Adjust this if you rename or add ACF fields.
 function mapWpProduct(post) {
   const acf = post.acf || {};
   return {
@@ -19,6 +38,7 @@ function mapWpProduct(post) {
     shape: acf.shape || 'jar',
     bg: acf.bg_color || '#DEDEDA',
     fill: acf.fill_color || '#0B0B0C',
+    photo: wpPhotoUrl(post),
     price: Number(acf.price) || 0,
     name: stripTags(post.title && post.title.rendered),
     ko: acf.ko_name || '',
@@ -38,7 +58,7 @@ function mapWpProduct(post) {
 async function loadProducts() {
   if (!WP_API) return;
   try {
-    const res = await fetch(`${WP_API}/products?per_page=100&status=publish`);
+    const res = await fetch(`${WP_API}/products?per_page=100&status=publish&_embed=1`);
     if (!res.ok) throw new Error('WP products request failed: ' + res.status);
     const posts = await res.json();
     if (!Array.isArray(posts) || !posts.length) return; // keep mock fallback
