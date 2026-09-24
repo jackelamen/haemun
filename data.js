@@ -1,68 +1,66 @@
 const CATS = ['beauty', 'fashion', 'wellness', 'pet', 'medical'];
 const CAT_COLOR = { beauty: '#C1272D', fashion: '#0B0B0C', wellness: '#1F3F8C', pet: '#A8742A', medical: '#2E6B5E' };
 
-// WordPress REST API base. Set to '' to disable live fetching and use the
-// mock PRODUCTS/POSTS below as-is.
-const WP_API = 'https://mediumblue-crow-786275.hostingersite.com/wp-json/wp/v2';
+// The site runs WooCommerce, so real product data lives in WooCommerce's
+// own tables, not a plain WordPress post. The Store API is WooCommerce's
+// public, no-auth-required endpoint meant for exactly this (a separate
+// storefront) — no API keys, no ACF setup needed.
+const WC_STORE_API = 'https://mediumblue-crow-786275.hostingersite.com/wp-json/wc/store/v1';
 
 const stripTags = (html) => String(html || '').replace(/<[^>]*>/g, '').trim();
 
-// Maps a WordPress "product" post (with ACF fields attached via the
-// rest_prepare_product filter in functions.php) to the shape the frontend
-// expects. Adjust this if you rename or add ACF fields.
-// A real uploaded photo can come from either the post's Featured Image
-// (via _embed) or an ACF image field named "photo" (any of ACF's three
-// return formats: array/object, plain URL string, or attachment ID —
-// an ID alone can't be resolved to a URL without another request, so
-// it's skipped rather than guessed).
-function wpPhotoUrl(post) {
-  const acfPhoto = post.acf && post.acf.photo;
-  if (acfPhoto) {
-    if (typeof acfPhoto === 'string') return acfPhoto;
-    if (acfPhoto.url) return acfPhoto.url;
-  }
-  const media = post._embedded && post._embedded['wp:featuredmedia'] && post._embedded['wp:featuredmedia'][0];
-  if (media && media.source_url) return media.source_url;
-  return null;
+// Best-effort match from a WooCommerce category name to one of our five
+// fixed categories, since WooCommerce's own category list is free-form.
+// Falls back to "beauty" if nothing matches.
+function guessCat(wcCategories) {
+  const names = (wcCategories || []).map((c) => c.name.toLowerCase()).join(' ');
+  if (/pet/.test(names)) return 'pet';
+  if (/medical|health.?travel|clinic/.test(names)) return 'medical';
+  if (/wellness|health|supplement/.test(names)) return 'wellness';
+  if (/fashion|apparel|clothing/.test(names)) return 'fashion';
+  return 'beauty';
 }
 
-// Maps a WordPress "product" post (with ACF fields attached via the
-// rest_prepare_product filter in functions.php) to the shape the frontend
-// expects. Adjust this if you rename or add ACF fields.
-function mapWpProduct(post) {
-  const acf = post.acf || {};
+// Maps a WooCommerce Store API product into the shape the frontend
+// expects. WooCommerce doesn't have fields for our drawn-illustration
+// system (shape/bg/fill) or origin/MOQ, so those fall back to sane
+// defaults — they're irrelevant anyway once a real photo is present,
+// since mediaHtml() always prefers a real photo over the illustration.
+function mapWcProduct(p) {
+  const minorUnit = (p.prices && p.prices.currency_minor_unit) || 2;
+  const price = p.prices ? Number(p.prices.price) / Math.pow(10, minorUnit) : 0;
+  const images = (p.images || []).map((img) => img.src).filter(Boolean);
   return {
-    id: 'wp' + post.id,
-    vol: !!acf.is_vol,
-    cat: acf.category || 'beauty',
-    shape: acf.shape || 'jar',
-    bg: acf.bg_color || '#DEDEDA',
-    fill: acf.fill_color || '#0B0B0C',
-    photo: wpPhotoUrl(post),
-    price: Number(acf.price) || 0,
-    name: stripTags(post.title && post.title.rendered),
-    ko: acf.ko_name || '',
-    origin: acf.origin || 'Seoul',
-    moq: Number(acf.moq) || 1,
-    service: !!acf.is_service,
-    teaser: acf.teaser || stripTags(post.excerpt && post.excerpt.rendered),
-    form: acf.teaser ? [['Details', acf.teaser]] : [['Details', stripTags(post.content && post.content.rendered)]],
-    prov: [['Origin', acf.origin || '']],
+    id: 'wc' + p.id,
+    vol: (p.tags || []).some((tg) => /volume/i.test(tg.name)),
+    cat: guessCat(p.categories),
+    shape: 'jar', bg: '#DEDEDA', fill: '#0B0B0C', // unused once `photo` is set
+    photo: images[0] || null,
+    gallery: images,
+    price,
+    name: stripTags(p.name),
+    ko: '',
+    origin: 'Seoul',
+    moq: 1,
+    service: false,
+    teaser: stripTags(p.short_description) || stripTags(p.description).slice(0, 160),
+    form: [['Description', stripTags(p.description) || stripTags(p.short_description)]],
+    prov: [['Category', (p.categories || []).map((c) => c.name).join(', ') || '—']],
   };
 }
 
-// Fetches live products from WordPress and replaces the mock PRODUCTS array
-// in place (so every other reference to PRODUCTS stays valid). Falls back
-// to the mock data below if the request fails or WordPress has no products
-// published yet, so the site never renders blank.
+// Fetches live products from WooCommerce's Store API and replaces the mock
+// PRODUCTS array in place (so every other reference to PRODUCTS stays
+// valid). Falls back to the mock data below if the request fails or the
+// store has no published products yet, so the site never renders blank.
 async function loadProducts() {
-  if (!WP_API) return;
+  if (!WC_STORE_API) return;
   try {
-    const res = await fetch(`${WP_API}/products?per_page=100&status=publish&_embed=1`);
-    if (!res.ok) throw new Error('WP products request failed: ' + res.status);
-    const posts = await res.json();
-    if (!Array.isArray(posts) || !posts.length) return; // keep mock fallback
-    const mapped = posts.map(mapWpProduct);
+    const res = await fetch(`${WC_STORE_API}/products?per_page=100`);
+    if (!res.ok) throw new Error('WooCommerce Store API request failed: ' + res.status);
+    const items = await res.json();
+    if (!Array.isArray(items) || !items.length) return; // keep mock fallback
+    const mapped = items.map(mapWcProduct);
     PRODUCTS.length = 0;
     PRODUCTS.push(...mapped);
   } catch (err) {

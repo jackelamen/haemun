@@ -6,7 +6,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 
 const state = {
   lang: 'en', b2b: false, view: 'volume', cat: 'all', origin: 'all', sort: 'feat',
-  jcat: 'all', postId: null, cart: {}, cartOpen: false, activeId: null, tab: 'form', qty: 1,
+  jcat: 'all', postId: null, cart: {}, cartOpen: false, activeId: null, tab: 'form', qty: 1, photoIdx: 0,
 };
 
 function setState(patch) { Object.assign(state, patch); render(); }
@@ -402,9 +402,12 @@ function pdpHtml(t) {
   const rows = state.tab === 'form' ? raw.form : state.tab === 'prov' ? raw.prov : comp.concat([['Importer', 'Haemun Pte. Ltd., Singapore']]);
   const tabs = [['form', t.tabF], ['prov', t.tabP], ['spec', t.tabS]].map(([id, label]) => `<button class="tlink" data-action="setTab" data-tab="${id}" style="${state.tab === id ? 'color:#0B0B0C;text-decoration:underline' : 'color:#7A7A78'}">${label}</button>`).join('');
   const qtyBlock = svc ? '' : `<div class="qty"><button data-action="qty" data-delta="-1">−</button><span class="mono">${state.qty}</span><button data-action="qty" data-delta="1">+</button></div>`;
+  const gallery = raw.gallery || [];
+  const mainImg = gallery.length ? `<img src="${esc(gallery[state.photoIdx] || gallery[0])}" alt="${esc(raw.name)}" style="width:100%;height:100%;object-fit:cover;display:block">` : mediaHtml(raw);
+  const thumbs = gallery.length > 1 ? `<div class="pdp-thumbs">${gallery.map((src, i) => `<button class="pdp-thumb" data-action="setPhoto" data-idx="${i}" style="${i === state.photoIdx ? 'border-color:#0B0B0C' : 'border-color:transparent'}"><img src="${esc(src)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block"></button>`).join('')}</div>` : '';
   return `
   <div class="modal-backdrop pdp">
-    <div class="pdp-img" style="background:${raw.bg}">${mediaHtml(raw)}<span class="cap ov-tl">${v.no}</span></div>
+    <div class="pdp-img" style="background:${raw.bg}">${mainImg}<span class="cap ov-tl">${v.no}</span>${thumbs}</div>
     <div class="pdp-body">
       <div class="pdp-top"><span class="cap muted">${t.shop} / ${v.catLabel}</span><button class="tlink" data-action="closeProduct">${t.close} ✕</button></div>
       <div class="pdp-origin flex-c">${dotHtml(v.dotColor)}${raw.origin}</div>
@@ -478,10 +481,11 @@ document.addEventListener('click', (e) => {
   else if (a === 'nav-about') go({ view: 'about' });
   else if (a === 'goCat') go({ view: 'mall', cat: el.dataset.cat, origin: 'all' });
   else if (a === 'openArticle') go({ view: 'article', postId: el.dataset.id });
-  else if (a === 'openProduct') setState({ activeId: el.dataset.id, qty: 1, tab: 'form' });
+  else if (a === 'openProduct') setState({ activeId: el.dataset.id, qty: 1, tab: 'form', photoIdx: 0 });
+  else if (a === 'setPhoto') setState({ photoIdx: Number(el.dataset.idx) });
   else if (a === 'quick') {
     const p = PRODUCTS.find((x) => x.id === el.dataset.id);
-    if (p.service || state.b2b) setState({ activeId: p.id, qty: state.b2b && !p.service ? p.moq : 1, tab: p.service ? 'form' : 'spec' });
+    if (p.service || state.b2b) setState({ activeId: p.id, qty: state.b2b && !p.service ? p.moq : 1, tab: p.service ? 'form' : 'spec', photoIdx: 0 });
     else { addToCart(p.id, 1); setState({ cartOpen: true }); }
   }
   else if (a === 'closeProduct') setState({ activeId: null });
