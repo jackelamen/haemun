@@ -1,6 +1,56 @@
 const CATS = ['beauty', 'fashion', 'wellness', 'pet', 'medical'];
 const CAT_COLOR = { beauty: '#C1272D', fashion: '#0B0B0C', wellness: '#1F3F8C', pet: '#A8742A', medical: '#2E6B5E' };
-const PRODUCTS = [
+
+// WordPress REST API base. Set to '' to disable live fetching and use the
+// mock PRODUCTS/POSTS below as-is.
+const WP_API = 'https://mediumblue-crow-786275.hostingersite.com/wp-json/wp/v2';
+
+const stripTags = (html) => String(html || '').replace(/<[^>]*>/g, '').trim();
+
+// Maps a WordPress "product" post (with ACF fields attached via the
+// rest_prepare_product filter in functions.php) to the shape the frontend
+// expects. Adjust this if you rename or add ACF fields.
+function mapWpProduct(post) {
+  const acf = post.acf || {};
+  return {
+    id: 'wp' + post.id,
+    vol: !!acf.is_vol,
+    cat: acf.category || 'beauty',
+    shape: acf.shape || 'jar',
+    bg: acf.bg_color || '#DEDEDA',
+    fill: acf.fill_color || '#0B0B0C',
+    price: Number(acf.price) || 0,
+    name: stripTags(post.title && post.title.rendered),
+    ko: acf.ko_name || '',
+    origin: acf.origin || 'Seoul',
+    moq: Number(acf.moq) || 1,
+    service: !!acf.is_service,
+    teaser: acf.teaser || stripTags(post.excerpt && post.excerpt.rendered),
+    form: acf.teaser ? [['Details', acf.teaser]] : [['Details', stripTags(post.content && post.content.rendered)]],
+    prov: [['Origin', acf.origin || '']],
+  };
+}
+
+// Fetches live products from WordPress and replaces the mock PRODUCTS array
+// in place (so every other reference to PRODUCTS stays valid). Falls back
+// to the mock data below if the request fails or WordPress has no products
+// published yet, so the site never renders blank.
+async function loadProducts() {
+  if (!WP_API) return;
+  try {
+    const res = await fetch(`${WP_API}/products?per_page=100&status=publish`);
+    if (!res.ok) throw new Error('WP products request failed: ' + res.status);
+    const posts = await res.json();
+    if (!Array.isArray(posts) || !posts.length) return; // keep mock fallback
+    const mapped = posts.map(mapWpProduct);
+    PRODUCTS.length = 0;
+    PRODUCTS.push(...mapped);
+  } catch (err) {
+    console.warn('Falling back to mock products —', err.message);
+  }
+}
+
+let PRODUCTS = [
   { id: 'p1', vol: true, cat: 'beauty', shape: 'jar', bg: '#DEDEDA', fill: '#0B0B0C', price: 54, name: 'Chungdam Cellular Barrier Cream', ko: '청담 셀룰러 배리어 크림', origin: 'Seoul, Gangnam', moq: 48,
     teaser: 'Ceramide and peptide balm, developed with Cheongdam dermatology clinics.',
     form: [['Key actives', 'Ceramide NP 3%, 5-peptide complex, panthenol'], ['Texture', 'Dense balm-cream, 50 ml'], ['Free of', 'Synthetic fragrance, mineral oil, parabens']],

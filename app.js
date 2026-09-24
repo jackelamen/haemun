@@ -140,8 +140,9 @@ function homeHtml(t) {
   const volProducts = PRODUCTS.filter((p) => p.vol);
   const catTiles = CATS.map((c, i) => {
     const f = PRODUCTS.find((p) => p.cat === c && p.vol) || PRODUCTS.find((p) => p.cat === c);
+    const img = f ? `<span class="cat-img" style="height:420px;background:${f.bg}">${shapeSvg(f, false)}<span class="cap ov-tl">0${i + 1}</span></span>` : `<span class="cat-img" style="height:420px;background:#ECECE9"><span class="cap ov-tl">0${i + 1}</span></span>`;
     return `<button class="cat-tile" data-action="goCat" data-cat="${c}">
-      <span class="cat-img" style="height:420px;background:${f.bg}">${shapeSvg(f, false)}<span class="cap ov-tl">0${i + 1}</span></span>
+      ${img}
       <span class="cat-row"><span class="flex-c" style="font-size:14px;font-weight:500">${dotHtml(CAT_COLOR[c])}${t.cats[c]}</span><span class="mono small muted">${String(PRODUCTS.filter((p) => p.cat === c).length).padStart(2, '0')} →</span></span>
       <span class="cat-ko">${t.catDesc[c]}</span>
     </button>`;
@@ -504,3 +505,4 @@ document.addEventListener('click', (e) => {
 });
 
 render();
+loadProducts().then(render);
