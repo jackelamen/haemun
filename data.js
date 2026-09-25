@@ -7,7 +7,22 @@ const CAT_COLOR = { beauty: '#C1272D', fashion: '#0B0B0C', wellness: '#1F3F8C', 
 // storefront) — no API keys, no ACF setup needed.
 const WC_STORE_API = 'https://mediumblue-crow-786275.hostingersite.com/wp-json/wc/store/v1';
 
-const stripTags = (html) => String(html || '').replace(/<[^>]*>/g, '').trim();
+const decode = (t) => t.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&#8217;|&rsquo;/g, '\u2019').replace(/&#8211;|&ndash;/g, '\u2013').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'");
+const stripTags = (html) => decode(String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ')).trim();
+
+// Splits WooCommerce description HTML into readable blocks, keeping
+// paragraph and list-item breaks instead of one wall of text.
+function htmlToBlocks(html) {
+  return String(html || '')
+    .replace(/<li[^>]*>/gi, '\n\u2022 ')
+    .replace(/<\/(p|li|h[1-6]|div)>|<br\s*\/?>/gi, '\n')
+    .split('\n')
+    .map((line) => stripTags(line))
+    .filter(Boolean);
+}
+
+// Currency reported by the store; drives the price prefix site-wide.
+let STORE_CURRENCY = 'SGD';
 
 // Best-effort match from a WooCommerce category name to one of our five
 // fixed categories, since WooCommerce's own category list is free-form.
@@ -40,11 +55,12 @@ function mapWcProduct(p) {
     price,
     name: stripTags(p.name),
     ko: '',
-    origin: 'Seoul',
+    origin: (p.brands && p.brands[0] && stripTags(p.brands[0].name)) || '',
     moq: 1,
     service: false,
-    teaser: stripTags(p.short_description) || stripTags(p.description).slice(0, 160),
-    form: [['Description', stripTags(p.description) || stripTags(p.short_description)]],
+    teaser: stripTags(p.short_description) || htmlToBlocks(p.description).slice(0, 2).join(' ').slice(0, 180),
+    desc: htmlToBlocks(p.description || p.short_description),
+    form: [],
     prov: [['Category', (p.categories || []).map((c) => c.name).join(', ') || '—']],
   };
 }
@@ -61,6 +77,7 @@ async function loadProducts() {
     const items = await res.json();
     if (!Array.isArray(items) || !items.length) return; // keep mock fallback
     const mapped = items.map(mapWcProduct);
+    if (items[0].prices && items[0].prices.currency_code) STORE_CURRENCY = items[0].prices.currency_code;
     PRODUCTS.length = 0;
     PRODUCTS.push(...mapped);
   } catch (err) {
@@ -224,3 +241,7 @@ const T = {
     empty: '장바구니가 비어 있습니다.', subtotal: '소계', gst: '싱가포르 GST 9% 포함', checkout: 'PayNow / 카드 결제',
     pr: [['37.56N', '서울', '직접 방문해 고릅니다. 스무 곳 중 한 곳 미만만 입점합니다.'], ['4,630 KM', '바다 위', '배치 기록과 콜드체인 데이터가 함께 이동합니다.'], ['1.35N', '싱가포르', '카테고리별 규정 준수를 마친 뒤 등록됩니다.']] },
 };
+
+// Kept so journal stories can still draw their illustration after live
+// products replace PRODUCTS.
+const MOCK_PRODUCTS = PRODUCTS.slice();

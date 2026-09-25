@@ -1,22 +1,60 @@
 /* Haemun storefront — vanilla JS rewrite of the DCLogic prototype. */
-const sgd = (n) => 'S$ ' + n.toLocaleString('en-SG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const PREFIX = { SGD: 'S$ ', USD: 'US$ ', KRW: '₩' };
+const sgd = (n) => (PREFIX[STORE_CURRENCY] || STORE_CURRENCY + ' ') + n.toLocaleString('en-SG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const dotHtml = (c) => `<span class="dot" style="background:${c}"></span>`;
 const region = (o) => o.split(',')[0];
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const state = {
   lang: 'en', b2b: false, view: 'volume', cat: 'all', origin: 'all', sort: 'feat',
-  jcat: 'all', postId: null, cart: {}, cartOpen: false, activeId: null, tab: 'form', qty: 1, photoIdx: 0,
+  jcat: 'all', postId: null, cart: loadCart(), cartOpen: false, activeId: null, tab: 'form', qty: 1, photoIdx: 0,
+  loading: !!WC_STORE_API,
 };
+
+function loadCart() { try { return JSON.parse(localStorage.getItem('hm-cart')) || {}; } catch (e) { return {}; } }
+function saveCart() { try { localStorage.setItem('hm-cart', JSON.stringify(state.cart)); } catch (e) {} }
+const findProduct = (id) => PRODUCTS.find((p) => p.id === id);
+const artFor = (id) => findProduct(id) || MOCK_PRODUCTS.find((p) => p.id === id);
+// Volume shows curated picks; with a live store that has none tagged
+// "volume" yet, fall back to the newest six so the section is never empty.
+const volumePicks = () => { const v = PRODUCTS.filter((p) => p.vol); return v.length ? v : PRODUCTS.slice(0, 6); };
+
+// Hash routes so Back/Forward and refresh keep the reader where they were.
+function toHash() {
+  if (state.view === 'mall') return state.cat === 'all' ? '#/shop' : '#/shop/' + state.cat;
+  if (state.view === 'journal') return '#/journal';
+  if (state.view === 'article') return '#/journal/' + state.postId;
+  if (state.view === 'about') return '#/about';
+  return '#/';
+}
+function fromHash() {
+  const [, a, b] = (location.hash || '#/').replace(/^#/, '').split('/');
+  if (a === 'shop') return { view: 'mall', cat: CATS.includes(b) ? b : 'all' };
+  if (a === 'journal') return b ? { view: 'article', postId: b } : { view: 'journal', postId: null };
+  if (a === 'about') return { view: 'about' };
+  return { view: 'volume' };
+}
 
 function setState(patch) { Object.assign(state, patch); render(); }
 function addToCart(id, n) {
   const c = { ...state.cart };
   c[id] = Math.max(0, (c[id] || 0) + n);
   if (!c[id]) delete c[id];
-  setState({ cart: c });
+  state.cart = c; saveCart();
+  setState({});
 }
-function go(patch) { setState({ activeId: null, ...patch }); window.scrollTo(0, 0); }
+function go(patch) {
+  setState({ activeId: null, cartOpen: false, ...patch });
+  const h = toHash();
+  if (location.hash !== h) history.pushState(null, '', h);
+  window.scrollTo(0, 0);
+}
+window.addEventListener('popstate', () => { setState({ activeId: null, cartOpen: false, ...fromHash() }); window.scrollTo(0, 0); });
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (state.activeId) setState({ activeId: null });
+  else if (state.cartOpen) setState({ cartOpen: false });
+});
 
 function shapeSvg(p, label = true) {
   const L = (y, size, sp) => label ? `<text x="150" y="${y}" text-anchor="middle" font-family="IBM Plex Sans KR" font-weight="600" font-size="${size}" letter-spacing="${sp}" fill="#0B0B0C">HAEMUN</text>` : '';
@@ -80,7 +118,7 @@ function cardHtml(p, t, h, opts = {}) {
       <button class="link-btn cap" data-action="openProduct" data-id="${p.id}">${t.dossier} ↓</button>
     </div>` : '';
   return `<article class="p-card">
-    <button class="p-img" style="height:${h}px;background:${p.bg}" data-action="openProduct" data-id="${p.id}">
+    <button class="p-img" style="aspect-ratio:${h >= 560 ? '4 / 5' : '3 / 4'};background:${p.bg}" aria-label="${esc(p.name)}" data-action="openProduct" data-id="${p.id}">
       ${mediaHtml(p)}
       ${num}
       <span class="cap ov-tr">${v.tag}</span>
@@ -89,7 +127,7 @@ function cardHtml(p, t, h, opts = {}) {
     <div class="p-info">
       <span class="p-name">${esc(p.name)}</span><span class="p-price">${v.priceLabel}</span>
       <span class="muted">${esc(p.ko)}</span><span class="muted small right">${v.priceNote}</span>
-      <span class="p-meta">${dotHtml(v.dotColor)}${v.catLabel} · ${esc(p.origin)}</span>
+      <span class="p-meta">${dotHtml(v.dotColor)}${v.catLabel}${p.origin ? ' · ' + esc(p.origin) : ''}</span>
       <button class="link-btn small" data-action="quick" data-id="${p.id}">${v.quickLabel}</button>
     </div>
     ${b2bBlock}
@@ -107,10 +145,9 @@ function sechead(n, title, sub, btnAction, btnLabel) {
 }
 
 function postCard(j, t, h, big = false) {
-  const pr = j.product ? PRODUCTS.find((p) => p.id === j.product) : null;
-  const look = pr || j;
+  const look = (j.product && artFor(j.product)) || j;
   return `<button class="post-card" data-action="openArticle" data-id="${j.id}">
-    <span class="post-img" style="height:${h}px;background:${look.bg}">${mediaHtml(look, false)}</span>
+    <span class="post-img" style="aspect-ratio:4 / 3;background:${look.bg}">${mediaHtml(look, false)}</span>
     <span class="cap post-meta"><span class="flex-c">${dotHtml(CAT_COLOR[j.cat] || '#C1272D')}${t.cats[j.cat]}</span><span>${j.date}</span><span>${j.read}</span></span>
     <span class="post-title" style="font-size:${big ? '40px' : '20px'};font-weight:${big ? 300 : 500}">${esc(j.title[state.lang])}</span>
     <span class="post-dek">${esc(j.dek[state.lang])}</span>
@@ -140,13 +177,14 @@ function navStyle(view) {
   const active = view === state.view || view === '__b2b' && state.b2b || view === '__lang';
   return active ? 'color:#0B0B0C;text-decoration:underline;text-underline-offset:8px' : 'color:#7A7A78';
 }
-function cartCount() { return Object.values(state.cart).reduce((a, b) => a + b, 0); }
+function cartCount() { return Object.keys(state.cart).filter(findProduct).reduce((a, id) => a + state.cart[id], 0); }
+function skeletons(n, ratio) { return Array.from({ length: n }, () => `<div class="skel"><div class="skel-img" style="aspect-ratio:${ratio}"></div><div class="skel-line"></div><div class="skel-line short"></div></div>`).join(''); }
 
 function homeHtml(t) {
-  const volProducts = PRODUCTS.filter((p) => p.vol);
+  const volProducts = volumePicks();
   const catTiles = CATS.map((c, i) => {
     const f = PRODUCTS.find((p) => p.cat === c && p.vol) || PRODUCTS.find((p) => p.cat === c);
-    const img = f ? `<span class="cat-img" style="height:420px;background:${f.bg}">${mediaHtml(f, false)}<span class="cap ov-tl">0${i + 1}</span></span>` : `<span class="cat-img" style="height:420px;background:#ECECE9"><span class="cap ov-tl">0${i + 1}</span></span>`;
+    const img = f ? `<span class="cat-img" style="aspect-ratio:3 / 4;background:${f.bg}">${mediaHtml(f, false)}<span class="cap ov-tl">0${i + 1}</span></span>` : `<span class="cat-img" style="aspect-ratio:3 / 4;background:#ECECE9"><span class="cap ov-tl">0${i + 1}</span></span>`;
     return `<button class="cat-tile" data-action="goCat" data-cat="${c}">
       ${img}
       <span class="cat-row"><span class="flex-c" style="font-size:14px;font-weight:500">${dotHtml(CAT_COLOR[c])}${t.cats[c]}</span><span class="mono small muted">${String(PRODUCTS.filter((p) => p.cat === c).length).padStart(2, '0')} →</span></span>
@@ -185,7 +223,7 @@ function homeHtml(t) {
 
   <section class="sec">
     ${sechead('01', t.volTitle, t.volSub, 'goCat', t.shopAll)}
-    <div class="grid3" style="margin-top:40px">${volProducts.map((p) => cardHtml(p, t, 600)).join('')}</div>
+    <div class="grid3" id="volume" style="margin-top:40px">${state.loading ? skeletons(3, '4 / 5') : volProducts.map((p) => cardHtml(p, t, 600)).join('')}</div>
   </section>
 
   <section class="sec">
@@ -233,11 +271,11 @@ function mallHtml(t) {
       <span class="flex-c">${c === 'all' ? '<span class="dot" style="background:transparent"></span>' : dotHtml(CAT_COLOR[c])}${c === 'all' ? t.shopAll : t.cats[c]}</span><span class="mono small">${count}</span>
     </button>`;
   }).join('');
-  const originList = ['all'].concat([...new Set(PRODUCTS.map((p) => region(p.origin)))]);
+  const originList = ['all'].concat([...new Set(PRODUCTS.map((p) => region(p.origin)).filter(Boolean))]);
   const origins = originList.map((o) => `<button class="origin-chip" data-action="setOrigin" data-origin="${o}" style="${state.origin === o ? 'border-color:#0B0B0C;background:#0B0B0C;color:#FFFFFF' : 'border-color:#E0E0DD;background:transparent;color:#0B0B0C'}">${o === 'all' ? t.all : o}</button>`).join('');
   const sorts = [['feat', t.sNew], ['low', t.sLow], ['high', t.sHigh]].map(([id, label]) => `<button class="tlink" data-action="setSort" data-sort="${id}" style="${state.sort === id ? 'color:#0B0B0C;text-decoration:underline' : 'color:#7A7A78'}">${label}</button>`).join('');
   const medNote = state.cat === 'medical' ? `<div class="med-note"><span>${t.medNote}</span><span class="cap" style="color:#2E6B5E">${t.medTag}</span></div>` : '';
-  const items = mall.length ? mall.map((p) => cardHtml(p, t, 460, { number: false })).join('') : `<div class="empty">${t.none}</div>`;
+  const items = state.loading ? skeletons(6, '3 / 4') : mall.length ? mall.map((p) => cardHtml(p, t, 460, { number: false })).join('') : `<div class="empty">${t.none}</div>`;
   return `
   <section class="sec-tight">
     <div class="cap muted">HAEMUN / ${t.shop} / ${mallTitle}</div>
@@ -268,7 +306,7 @@ function journalHtml(t) {
   const rest = jposts.slice(1);
   const featuredHtml = featured ? `
   <section class="featured">
-    <button class="feat-img" style="background:${(PRODUCTS.find((p) => p.id === featured.product) || featured).bg}" data-action="openArticle" data-id="${featured.id}">${mediaHtml(PRODUCTS.find((p) => p.id === featured.product) || featured, false)}</button>
+    <button class="feat-img" style="background:${(artFor(featured.product) || featured).bg}" data-action="openArticle" data-id="${featured.id}">${mediaHtml(artFor(featured.product) || featured, false)}</button>
     <div class="feat-text">
       <div class="cap flex-c" style="gap:14px;color:#7A7A78"><span style="color:#C1272D">${t.featuredLabel}</span><span>${t.cats[featured.cat]}</span><span>${featured.date}</span></div>
       <div class="feat-title">${esc(featured.title[state.lang])}</div>
@@ -291,7 +329,8 @@ function journalHtml(t) {
 }
 
 function articleHtml(t, post) {
-  const pr = post.product ? PRODUCTS.find((p) => p.id === post.product) : null;
+  const pr = post.product ? findProduct(post.product) : null;
+  const art = (post.product && artFor(post.product)) || post;
   const productBlock = pr ? `
   <div class="art-product-wrap">
     <div class="art-product">
@@ -308,7 +347,7 @@ function articleHtml(t, post) {
       <h1 class="art-title">${esc(post.title[state.lang])}</h1>
       <p class="art-dek">${esc(post.dek[state.lang])}</p>
     </div>
-    <div class="art-hero" style="background:${(pr || post).bg}">${mediaHtml(pr || post, false)}</div>
+    <div class="art-hero" style="background:${art.bg}">${mediaHtml(art, false)}</div>
     <div class="art-body">
       <div class="cap art-byline">${t.by}<br><span style="color:#0B0B0C">${esc(post.author)}</span></div>
       <div class="art-text">${post.paras.map((p) => `<p>${esc(p)}</p>`).join('')}</div>
@@ -399,23 +438,23 @@ function pdpHtml(t) {
     fashion: [['Origin', 'Made in Korea'], ['Materials', 'Fibre content labelled in English and Korean']],
     medical: [['Providers', 'Licensed Korean medical institutions'], ['Accreditation', '[PROVIDER ACCREDITATION]'], ['Booking', 'Only after a consultation with the provider']],
   }[raw.cat];
-  const rows = state.tab === 'form' ? raw.form : state.tab === 'prov' ? raw.prov : comp.concat([['Importer', 'Haemun Pte. Ltd., Singapore']]);
+  const rows = state.tab === 'form' ? (raw.form || []) : state.tab === 'prov' ? raw.prov : comp.concat([['Importer', 'Haemun Pte. Ltd., Singapore']]);
   const tabs = [['form', t.tabF], ['prov', t.tabP], ['spec', t.tabS]].map(([id, label]) => `<button class="tlink" data-action="setTab" data-tab="${id}" style="${state.tab === id ? 'color:#0B0B0C;text-decoration:underline' : 'color:#7A7A78'}">${label}</button>`).join('');
   const qtyBlock = svc ? '' : `<div class="qty"><button data-action="qty" data-delta="-1">−</button><span class="mono">${state.qty}</span><button data-action="qty" data-delta="1">+</button></div>`;
   const gallery = raw.gallery || [];
   const mainImg = gallery.length ? `<img src="${esc(gallery[state.photoIdx] || gallery[0])}" alt="${esc(raw.name)}" style="width:100%;height:100%;object-fit:cover;display:block">` : mediaHtml(raw);
-  const thumbs = gallery.length > 1 ? `<div class="pdp-thumbs">${gallery.map((src, i) => `<button class="pdp-thumb" data-action="setPhoto" data-idx="${i}" style="${i === state.photoIdx ? 'border-color:#0B0B0C' : 'border-color:transparent'}"><img src="${esc(src)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block"></button>`).join('')}</div>` : '';
+  const thumbs = gallery.length > 1 ? `<div class="pdp-thumbs">${gallery.map((src, i) => `<button class="pdp-thumb" data-action="setPhoto" data-idx="${i}" aria-label="Photo ${i + 1}" style="${i === state.photoIdx ? 'border-color:#0B0B0C' : 'border-color:transparent'}"><img src="${esc(src)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block"></button>`).join('')}</div>` : '';
   return `
-  <div class="modal-backdrop pdp">
+  <div class="modal-backdrop pdp" role="dialog" aria-modal="true" aria-label="${esc(raw.name)}">
     <div class="pdp-img" style="background:${raw.bg}">${mainImg}<span class="cap ov-tl">${v.no}</span>${thumbs}</div>
     <div class="pdp-body">
       <div class="pdp-top"><span class="cap muted">${t.shop} / ${v.catLabel}</span><button class="tlink" data-action="closeProduct">${t.close} ✕</button></div>
-      <div class="pdp-origin flex-c">${dotHtml(v.dotColor)}${raw.origin}</div>
+      <div class="pdp-origin flex-c">${dotHtml(v.dotColor)}${esc(raw.origin || v.catLabel)}</div>
       <h1 class="pdp-name">${esc(raw.name)}</h1>
       <div class="pdp-ko">${esc(raw.ko)}</div>
       <div class="pdp-price-row"><span class="pdp-price">${v.priceLabel}</span><span class="cap muted">${v.priceNote} · ${raw.cat === 'beauty' || raw.cat === 'wellness' ? 'HSA NOTIFIED' : raw.cat === 'pet' ? 'AVS CLEARED' : raw.cat === 'medical' ? 'BY CONSULTATION' : 'MADE IN KOREA'}</span></div>
       <div class="pdp-tabs">${tabs}</div>
-      <div class="pdp-rows">${rows.map(([k, val]) => `<div class="pdp-row"><span class="mono small muted">${k}</span><span>${val}</span></div>`).join('')}</div>
+      <div class="pdp-rows">${state.tab === 'form' && raw.desc && raw.desc.length ? `<div class="pdp-desc">${raw.desc.map((line) => line.startsWith('\u2022') ? `<p class="pdp-li">${esc(line.slice(1).trim())}</p>` : `<p>${esc(line)}</p>`).join('')}</div>` : ''}${rows.map(([k, val]) => `<div class="pdp-row"><span class="mono small muted">${esc(k)}</span><span>${esc(val)}</span></div>`).join('')}</div>
       <div class="pdp-cta">
         ${qtyBlock}
         <button class="btn-solid" data-action="addActive"><span>${addLabel}</span><span class="mono">${lineTotal}</span></button>
@@ -425,27 +464,28 @@ function pdpHtml(t) {
 }
 
 function cartHtml(t) {
-  const lines = Object.keys(state.cart).map((id) => {
-    const p = PRODUCTS.find((x) => x.id === id), q = state.cart[id];
+  const ids = Object.keys(state.cart).filter(findProduct);
+  const lines = ids.map((id) => {
+    const p = findProduct(id), q = state.cart[id];
     return `<div class="cart-line">
-      <div class="cart-thumb" style="background:${p.bg}"></div>
-      <div><div style="font-weight:500">${esc(p.name)}</div><div class="muted">${p.origin}</div>
+      <div class="cart-thumb" style="background:${p.bg}">${mediaHtml(p, false)}</div>
+      <div><div style="font-weight:500">${esc(p.name)}</div><div class="muted">${esc(p.origin)}</div>
         <div class="qty" style="margin-top:10px"><button data-action="cartQty" data-id="${id}" data-delta="-1">−</button><span class="mono">${q}</span><button data-action="cartQty" data-id="${id}" data-delta="1">+</button></div>
       </div>
       <span style="font-weight:500">${sgd(p.price * q)}</span>
     </div>`;
   }).join('');
-  const sub = Object.keys(state.cart).reduce((a, id) => a + PRODUCTS.find((x) => x.id === id).price * state.cart[id], 0);
+  const sub = ids.reduce((a, id) => a + findProduct(id).price * state.cart[id], 0);
   return `
   <div class="modal-backdrop cart-backdrop">
     <button class="cart-scrim" data-action="closeCart" aria-label="Close"></button>
-    <aside class="cart-panel">
+    <aside class="cart-panel" role="dialog" aria-modal="true" aria-label="${t.bag}">
       <div class="cart-head"><span class="cap">${t.bag} (${cartCount()})</span><button class="tlink" data-action="closeCart">${t.close} ✕</button></div>
-      <div class="cart-lines">${lines || `<div class="muted" style="padding:40px 0">${t.empty}</div>`}</div>
+      <div class="cart-lines">${lines || `<div class="cart-empty"><p class="muted">${t.empty}</p><button class="btn-outline-dark cap" data-action="goCat" data-cat="all">${t.enterMall} →</button></div>`}</div>
       <div class="cart-foot">
         <div class="flex-b" style="font-size:14px;font-weight:500"><span>${t.subtotal}</span><span>${sgd(sub)}</span></div>
         <div class="muted" style="margin-top:6px">${t.gst}</div>
-        <button class="btn-solid cap" style="width:100%;margin-top:20px">${t.checkout}</button>
+        <button class="btn-solid cap" style="width:100%;margin-top:20px;justify-content:center" ${ids.length ? '' : 'disabled'}>${t.checkout}</button>
       </div>
     </aside>
   </div>`;
@@ -462,6 +502,8 @@ function render() {
     body = post ? articleHtml(t, post) : journalHtml(t);
   } else if (state.view === 'about') body = aboutHtml(t);
 
+  document.documentElement.lang = state.lang;
+  document.body.style.overflow = state.activeId || state.cartOpen ? 'hidden' : '';
   document.getElementById('app').innerHTML = `
     ${svgDefs()}
     ${header(t)}
@@ -479,7 +521,8 @@ document.addEventListener('click', (e) => {
   if (a === 'nav') go({ view: el.dataset.view, postId: null });
   else if (a === 'nav-journal') go({ view: 'journal', postId: null });
   else if (a === 'nav-about') go({ view: 'about' });
-  else if (a === 'goCat') go({ view: 'mall', cat: el.dataset.cat, origin: 'all' });
+  else if (a === 'setCat') { go({ view: 'mall', cat: el.dataset.cat }); return; }
+  else if (a === 'goCat') go({ view: 'mall', cat: el.dataset.cat || 'all', origin: 'all' });
   else if (a === 'openArticle') go({ view: 'article', postId: el.dataset.id });
   else if (a === 'openProduct') setState({ activeId: el.dataset.id, qty: 1, tab: 'form', photoIdx: 0 });
   else if (a === 'setPhoto') setState({ photoIdx: Number(el.dataset.idx) });
@@ -503,7 +546,6 @@ document.addEventListener('click', (e) => {
   else if (a === 'openCart') setState({ cartOpen: true });
   else if (a === 'closeCart') setState({ cartOpen: false });
   else if (a === 'cartQty') addToCart(el.dataset.id, Number(el.dataset.delta));
-  else if (a === 'setCat') setState({ cat: el.dataset.cat });
   else if (a === 'setOrigin') setState({ origin: el.dataset.origin });
   else if (a === 'setSort') setState({ sort: el.dataset.sort });
   else if (a === 'clearFilters') setState({ cat: 'all', origin: 'all', sort: 'feat' });
@@ -511,8 +553,9 @@ document.addEventListener('click', (e) => {
   else if (a === 'toggleTrade') setState({ b2b: !state.b2b });
   else if (a === 'enableTrade') { setState({ b2b: true }); window.scrollTo(0, 0); }
   else if (a === 'setLang') setState({ lang: el.dataset.lang });
-  else if (a === 'scrollHint') window.scrollTo({ top: 980, behavior: 'smooth' });
+  else if (a === 'scrollHint') { const v = document.getElementById('volume'); if (v) window.scrollTo({ top: v.getBoundingClientRect().top + scrollY - 120, behavior: 'smooth' }); }
 });
 
+Object.assign(state, fromHash());
 render();
-loadProducts().then(render);
+loadProducts().finally(() => setState({ loading: false }));
