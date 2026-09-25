@@ -41,6 +41,7 @@ function addToCart(id, n) {
   c[id] = Math.max(0, (c[id] || 0) + n);
   if (!c[id]) delete c[id];
   state.cart = c; saveCart();
+  if (n > 0) { state.bump = true; setTimeout(() => { state.bump = false; }, 700); }
   setState({});
 }
 function go(patch) {
@@ -168,7 +169,7 @@ function header(t) {
     <div class="htools">
       <button class="tlink" data-action="toggleTrade" style="${navStyle(state.b2b ? '__b2b' : '')}">${t.trade}</button>
       <span class="lang"><button class="tlink" data-action="setLang" data-lang="en" style="${navStyle(state.lang === 'en' ? '__lang' : '')}">EN</button><span class="sep">/</span><button class="tlink" data-action="setLang" data-lang="ko" style="${navStyle(state.lang === 'ko' ? '__lang' : '')}">한</button></span>
-      <button class="tlink bagbtn" data-action="openCart">${t.bag} <span class="bagcount">${cartCount()}</span></button>
+      <button class="tlink bagbtn" data-action="openCart">${t.bag} <span class="bagcount${state.bump ? ' bump' : ''}">${cartCount()}</span></button>
     </div>
   </header>
   ${state.b2b ? `<div class="tradebar"><span>${t.tradeNote}</span><span class="muted2">FOB INCHEON · DDP SINGAPORE</span></div>` : ''}`;
@@ -178,6 +179,17 @@ function navStyle(view) {
   return active ? 'color:#0B0B0C;text-decoration:underline;text-underline-offset:8px' : 'color:#7A7A78';
 }
 function cartCount() { return Object.keys(state.cart).filter(findProduct).reduce((a, id) => a + state.cart[id], 0); }
+// Same-category products first, then the rest; never items already excluded.
+function suggest(base, exclude, n) {
+  const pool = PRODUCTS.filter((p) => !exclude.includes(p.id));
+  return pool.filter((p) => p.cat === base.cat).concat(pool.filter((p) => p.cat !== base.cat)).slice(0, n);
+}
+function miniCard(p, t) {
+  return `<button class="mini" data-action="openProduct" data-id="${p.id}">
+    <span class="mini-img" style="background:${p.bg}">${mediaHtml(p, false)}</span>
+    <span class="mini-name">${esc(p.name)}</span><span class="muted">${viewOf(p, t).priceLabel}</span>
+  </button>`;
+}
 function skeletons(n, ratio) { return Array.from({ length: n }, () => `<div class="skel"><div class="skel-img" style="aspect-ratio:${ratio}"></div><div class="skel-line"></div><div class="skel-line short"></div></div>`).join(''); }
 
 function homeHtml(t) {
@@ -441,6 +453,7 @@ function pdpHtml(t) {
   const rows = state.tab === 'form' ? (raw.form || []) : state.tab === 'prov' ? raw.prov : comp.concat([['Importer', 'Haemun Pte. Ltd., Singapore']]);
   const tabs = [['form', t.tabF], ['prov', t.tabP], ['spec', t.tabS]].map(([id, label]) => `<button class="tlink" data-action="setTab" data-tab="${id}" style="${state.tab === id ? 'color:#0B0B0C;text-decoration:underline' : 'color:#7A7A78'}">${label}</button>`).join('');
   const qtyBlock = svc ? '' : `<div class="qty"><button data-action="qty" data-delta="-1">−</button><span class="mono">${state.qty}</span><button data-action="qty" data-delta="1">+</button></div>`;
+  const related = suggest(raw, [raw.id], 3);
   const gallery = raw.gallery || [];
   const mainImg = gallery.length ? `<img src="${esc(gallery[state.photoIdx] || gallery[0])}" alt="${esc(raw.name)}" style="width:100%;height:100%;object-fit:cover;display:block">` : mediaHtml(raw);
   const thumbs = gallery.length > 1 ? `<div class="pdp-thumbs">${gallery.map((src, i) => `<button class="pdp-thumb" data-action="setPhoto" data-idx="${i}" aria-label="Photo ${i + 1}" style="${i === state.photoIdx ? 'border-color:#0B0B0C' : 'border-color:transparent'}"><img src="${esc(src)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block"></button>`).join('')}</div>` : '';
@@ -455,9 +468,13 @@ function pdpHtml(t) {
       <div class="pdp-price-row"><span class="pdp-price">${v.priceLabel}</span><span class="cap muted">${v.priceNote} · ${raw.cat === 'beauty' || raw.cat === 'wellness' ? 'HSA NOTIFIED' : raw.cat === 'pet' ? 'AVS CLEARED' : raw.cat === 'medical' ? 'BY CONSULTATION' : 'MADE IN KOREA'}</span></div>
       <div class="pdp-tabs">${tabs}</div>
       <div class="pdp-rows">${state.tab === 'form' && raw.desc && raw.desc.length ? `<div class="pdp-desc">${raw.desc.map((line) => line.startsWith('\u2022') ? `<p class="pdp-li">${esc(line.slice(1).trim())}</p>` : `<p>${esc(line)}</p>`).join('')}</div>` : ''}${rows.map(([k, val]) => `<div class="pdp-row"><span class="mono small muted">${esc(k)}</span><span>${esc(val)}</span></div>`).join('')}</div>
+      ${related.length ? `<div class="pdp-related"><div class="cap muted">${t.related}</div><div class="rel-grid">${related.map((r) => miniCard(r, t)).join('')}</div></div>` : ''}
       <div class="pdp-cta">
-        ${qtyBlock}
-        <button class="btn-solid" data-action="addActive"><span>${addLabel}</span><span class="mono">${lineTotal}</span></button>
+        <div class="pdp-cta-row">
+          ${qtyBlock}
+          <button class="btn-solid" data-action="addActive"><span>${addLabel}</span><span class="mono">${lineTotal}</span></button>
+        </div>
+        <ul class="trust">${t.trust.map((x) => `<li>${x}</li>`).join('')}</ul>
       </div>
     </div>
   </div>`;
@@ -476,12 +493,21 @@ function cartHtml(t) {
     </div>`;
   }).join('');
   const sub = ids.reduce((a, id) => a + findProduct(id).price * state.cart[id], 0);
+  const last = findProduct(ids[ids.length - 1]);
+  const pairs = last ? suggest(last, ids, 2).filter((p) => !p.service) : [];
+  const ship = !ids.length || !FREE_SHIP ? '' : sub >= FREE_SHIP
+    ? `<div class="ship"><div class="ship-bar"><span style="width:100%"></span></div><p>${t.shipDone}</p></div>`
+    : `<div class="ship"><div class="ship-bar"><span style="width:${Math.round((sub / FREE_SHIP) * 100)}%"></span></div><p>${t.shipTo(sgd(FREE_SHIP - sub))}</p></div>`;
+  const pairHtml = pairs.length ? `<div class="pairs"><div class="cap muted">${t.pairs}</div>${pairs.map((p) => `<div class="pair">
+      <button class="pair-img" style="background:${p.bg}" data-action="openProduct" data-id="${p.id}" aria-label="${esc(p.name)}">${mediaHtml(p, false)}</button>
+      <div><div style="font-weight:500">${esc(p.name)}</div><div class="muted">${viewOf(p, t).priceLabel}</div></div>
+      <button class="link-btn small" data-action="cartQty" data-id="${p.id}" data-delta="1">${t.addShort}</button></div>`).join('')}</div>` : '';
   return `
   <div class="modal-backdrop cart-backdrop">
     <button class="cart-scrim" data-action="closeCart" aria-label="Close"></button>
     <aside class="cart-panel" role="dialog" aria-modal="true" aria-label="${t.bag}">
       <div class="cart-head"><span class="cap">${t.bag} (${cartCount()})</span><button class="tlink" data-action="closeCart">${t.close} ✕</button></div>
-      <div class="cart-lines">${lines || `<div class="cart-empty"><p class="muted">${t.empty}</p><button class="btn-outline-dark cap" data-action="goCat" data-cat="all">${t.enterMall} →</button></div>`}</div>
+      ${ship}<div class="cart-lines">${lines ? lines + pairHtml : `<div class="cart-empty"><p class="muted">${t.empty}</p><button class="btn-outline-dark cap" data-action="goCat" data-cat="all">${t.enterMall} →</button></div>`}</div>
       <div class="cart-foot">
         <div class="flex-b" style="font-size:14px;font-weight:500"><span>${t.subtotal}</span><span>${sgd(sub)}</span></div>
         <div class="muted" style="margin-top:6px">${t.gst}</div>

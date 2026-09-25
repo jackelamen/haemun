@@ -21,6 +21,10 @@ function htmlToBlocks(html) {
     .filter(Boolean);
 }
 
+// Order value (in store currency) above which delivery is free. Set to 0
+// to hide the progress line in the bag.
+const FREE_SHIP = 120;
+
 // Currency reported by the store; drives the price prefix site-wide.
 let STORE_CURRENCY = 'SGD';
 
@@ -185,7 +189,7 @@ const T = {
     catDesc: { beauty: 'Skin, body and hair formulas from independent Korean laboratories.', fashion: 'Clothing and objects made with Korean materials: hanji, ramie, najeon.', wellness: 'Ginseng, hanbang and functional nutrition, HSA notified.', pet: 'Food, care and objects for animals, made to the same standard as ours.', medical: 'Dermatology, screening and recovery in Korea, arranged end to end.' },
     cap1: 'Dalhangari, the moon jar. Empty by design.', volTag: '해문 제1호', h1: 'Korea,\nby sea.',
     sub: 'Every season, Haemun selects Korean makers, ateliers and clinics, and brings their work to Singapore and Southeast Asia.',
-    seeVol: 'See the volume', enterMall: 'Enter the shop',
+    seeVol: 'Shop Volume 01', enterMall: 'Enter the shop',
     volTitle: 'Volume 01: six objects', volSub: 'Autumn 2026 · One from every category',
     catH: 'Shop by category', catSub: 'Five categories, one standard.',
     jH: 'From the journal', jSub: 'Makers, materials and places.', jAll: 'All stories',
@@ -207,6 +211,8 @@ const T = {
     facts: [['Headquarters', 'Singapore, [ADDRESS]'], ['Sourcing office', 'Seoul, [ADDRESS]'], ['Founded', '[YEAR]'], ['Registration', 'UEN [NUMBER]'], ['Contact', '[EMAIL]']],
     tradeH: 'For retailers, clinics and stockists.', tradeB: 'Trade accounts see wholesale tiers, minimum orders and compliance dossiers across every category.', tradeCta: 'Switch to trade view',
     footer: 'Korea to Singapore, by sea.', fHouse: 'House', fHelp: 'Help', fShip: 'Shipping', fReturns: 'Returns', fContact: 'Contact',
+    shipTo: (n) => `You are ${n} away from complimentary delivery.`, shipDone: 'Complimentary delivery unlocked.', pairs: 'Pairs well with', related: 'You may also like', addShort: 'Add +',
+    trust: ['Shipped direct from Korea', 'Compliance handled for Singapore', 'Secure checkout · PayNow and card'],
     empty: 'Your bag is empty.', subtotal: 'Subtotal', gst: 'Prices include 9% Singapore GST', checkout: 'Proceed to PayNow / Card',
     pr: [['37.56N', 'Seoul', 'Chosen in person. Fewer than one in twenty makers make it.'], ['4,630 KM', 'At sea', 'Batch records and cold-chain data travel with every shipment.'], ['1.35N', 'Singapore', 'Cleared and compliant for its category before anything is listed.']] },
   ko: { ann1: '한국에서 싱가포르로 직송', ann2: '모든 카테고리 규정 준수',
@@ -216,7 +222,7 @@ const T = {
     catDesc: { beauty: '독립 연구실의 스킨, 바디, 헤어 포뮬러.', fashion: '한지, 모시, 나전 등 한국 소재로 만든 옷과 오브젝트.', wellness: '홍삼, 한방, 기능성 영양. HSA 신고 완료.', pet: '사람의 것과 같은 기준으로 만든 반려동물 제품.', medical: '한국의 피부과, 건강검진, 회복 프로그램을 처음부터 끝까지.' },
     cap1: '달항아리. 비워 둔 아름다움.', volTag: 'HAEMUN VOLUME 01', h1: '한국,\n바다 건너.',
     sub: '해문은 매 시즌 한국의 메이커, 아틀리에, 클리닉을 골라 싱가포르와 동남아시아로 전합니다.',
-    seeVol: '이번 호 보기', enterMall: '숍 둘러보기',
+    seeVol: '제1호 쇼핑하기', enterMall: '숍 둘러보기',
     volTitle: '제1호: 여섯 가지 오브젝트', volSub: '2026 가을 · 카테고리마다 하나씩',
     catH: '카테고리별 쇼핑', catSub: '다섯 카테고리, 하나의 기준.',
     jH: '저널', jSub: '메이커, 소재, 장소.', jAll: '모든 이야기',
@@ -238,6 +244,8 @@ const T = {
     facts: [['본사', '싱가포르, [주소]'], ['소싱 사무소', '서울, [주소]'], ['설립', '[연도]'], ['등록번호', 'UEN [번호]'], ['문의', '[이메일]']],
     tradeH: '리테일러, 클리닉, 입점사를 위해.', tradeB: '입점사 계정은 모든 카테고리의 도매 단가, 최소 주문량, 규정 준수 자료를 볼 수 있습니다.', tradeCta: '입점사 보기로 전환',
     footer: '한국에서 싱가포르로, 바다 건너.', fHouse: '하우스', fHelp: '도움말', fShip: '배송', fReturns: '반품', fContact: '문의',
+    shipTo: (n) => `${n} 더 담으면 무료 배송입니다.`, shipDone: '무료 배송이 적용됩니다.', pairs: '함께 쓰기 좋은 제품', related: '이런 제품은 어떠세요', addShort: '담기 +',
+    trust: ['한국에서 직접 배송', '싱가포르 규정 준수 완료', 'PayNow · 카드 안전 결제'],
     empty: '장바구니가 비어 있습니다.', subtotal: '소계', gst: '싱가포르 GST 9% 포함', checkout: 'PayNow / 카드 결제',
     pr: [['37.56N', '서울', '직접 방문해 고릅니다. 스무 곳 중 한 곳 미만만 입점합니다.'], ['4,630 KM', '바다 위', '배치 기록과 콜드체인 데이터가 함께 이동합니다.'], ['1.35N', '싱가포르', '카테고리별 규정 준수를 마친 뒤 등록됩니다.']] },
 };
