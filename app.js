@@ -6,7 +6,7 @@ const region = (o) => o.split(',')[0];
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const state = {
-  lang: 'en', b2b: false, view: 'volume', cat: 'all', origin: 'all', sort: 'feat',
+  lang: 'en', b2b: false, view: 'home', cat: 'all', origin: 'all', sort: 'feat',
   jcat: 'all', postId: null, cart: loadCart(), cartOpen: false, activeId: null, tab: 'form', qty: 1, photoIdx: 0,
   loading: !!WC_STORE_API,
 };
@@ -35,6 +35,8 @@ function pageHash() {
   if (state.view === 'journal') return '#/journal';
   if (state.view === 'article') return '#/journal/' + state.postId;
   if (state.view === 'about') return '#/about';
+  if (state.view === 'drop') return '#/volume/' + VOLUME.no;
+  if (state.view === 'drops') return '#/volumes';
   return '#/';
 }
 function fromHash() {
@@ -45,7 +47,9 @@ function fromHash() {
   if (a === 'shop') return { view: 'mall', cat: CATS.includes(b) ? b : 'all', ...product };
   if (a === 'journal') return b ? { view: 'article', postId: b, ...product } : { view: 'journal', postId: null, ...product };
   if (a === 'about') return { view: 'about', ...product };
-  return { view: 'volume', ...product };
+  if (a === 'volume') return { view: 'drop', ...product };
+  if (a === 'volumes') return { view: 'drops', ...product };
+  return { view: 'home', ...product };
 }
 let productPushed = false;
 let afterPop = null;
@@ -242,9 +246,9 @@ function header(t) {
   <div class="cap annbar"><span>${t.ann1}</span><span class="sep">·</span><span>${t.ann2}</span></div>
   <header class="site-header${filmHeader() ? ' on-film' : ''}">
     <nav class="hnav">
-      ${nav('volume', t.volume)}${nav('mall', t.shopAll)}${nav('journal', t.journal)}${nav('about', t.about)}
+      ${nav('drop', t.volume)}${nav('mall', t.shopAll)}${nav('journal', t.journal)}${nav('about', t.about)}
     </nav>
-    <button class="logo" data-action="nav" data-view="volume">
+    <button class="logo" data-action="nav" data-view="home">
       <img class="logo-mark on-light" src="assets/haemun-mark.png" alt="" width="40" height="40"><img class="logo-word on-light" src="assets/haemun-wordmark.png" alt="Haemun" width="92" height="17"><img class="logo-mark on-dark" src="assets/haemun-mark-white.png" alt="" width="40" height="40"><img class="logo-word on-dark" src="assets/haemun-wordmark-white.png" alt="" width="92" height="17">
     </button>
     <div class="htools">
@@ -284,6 +288,7 @@ function nextDropInfo(now = new Date()) {
 }
 function dropsHtml(t) {
   const d = nextDropInfo();
+  const notes = POSTS.find((j) => j.cat === 'house');
   const date = d.next.toLocaleDateString(state.lang === 'ko' ? 'ko-KR' : 'en-SG', { day: 'numeric', month: 'long' });
   const label = DROP_MONTHS.length === 12 ? '' : t.seasons[d.next.getMonth()];
   return `<div class="drops">
@@ -292,7 +297,7 @@ function dropsHtml(t) {
       <div class="drops-next"><span class="drops-dot"></span>${t.nextDrop(d.vol, label, date)} <span class="muted">· ${t.daysLeft(d.days)}</span></div>
     </div>
     <ol class="drops-steps">${t.drops.map(([n, h, b]) => `<li><span class="mono small drops-n">${n}</span><div class="drops-h">${h}</div><p>${b}</p></li>`).join('')}</ol>
-    <button class="link-btn small" data-action="openArticle" data-id="j6">${t.dropNotes} →</button>
+    ${notes ? `<button class="link-btn small" data-action="openArticle" data-id="${notes.id}">${t.dropNotes} →</button>` : ''}
   </div>`;
 }
 function skeletons(n, ratio) { return Array.from({ length: n }, () => `<div class="skel"><div class="skel-img" style="aspect-ratio:${ratio}"></div><div class="skel-line"></div><div class="skel-line short"></div></div>`).join(''); }
@@ -320,47 +325,7 @@ function volHeroHtml(t, vol) {
       <h1 class="vh-h1">${esc(t.heroH)}</h1>
       <p class="vh-dek">${esc(t.heroDek)}</p>
       ${chips ? `<div class="vh-ask"><div class="cap vh-q">${t.curiousQ}</div><div class="vh-chips">${chips}</div></div>` : ''}
-      <div class="vh-links"><button class="vh-link cap" data-action="scrollHint">${t.seeSix(vol.length)}</button><button class="vh-link dim cap" data-action="goCat" data-cat="all">${t.shopEverything(PRODUCTS.length)}</button></div>
-    </div>
-  </section>`;
-}
-
-function coverBandHtml(t) {
-  const post = POSTS[0];
-  const d = nextDropInfo();
-  const date = d.next.toLocaleDateString(state.lang === 'ko' ? 'ko-KR' : 'en-SG', { day: 'numeric', month: 'long' });
-  const season = DROP_MONTHS.length === 12 ? '' : t.seasons[d.next.getMonth()];
-  const story = post ? `<button class="cb-item" data-action="openArticle" data-id="${post.id}">
-      <span class="cb-th" style="background:${postLook(post).bg}">${mediaHtml(postLook(post), false)}</span>
-      <span><span class="cap muted">${t.bandJournal}</span><span class="cb-h">${esc(post.title[state.lang])}</span></span>
-    </button>` : '';
-  return `<section class="cover-band">
-    ${story}
-    <button class="cb-item" data-action="scrollDrops">
-      <span class="cb-num">${d.days}</span>
-      <span><span class="cap muted">${t.bandNext(d.vol)}</span><span class="cb-h">${t.bandNextH(season || ('Volume ' + d.vol), date)}</span></span>
-    </button>
-    <button class="cb-item" data-action="enableTrade">
-      <span class="cb-num cb-seal">海</span>
-      <span><span class="cap muted">${t.bandTrade}</span><span class="cb-h">${t.bandTradeH}</span></span>
-    </button>
-  </section>`;
-}
-
-// Seoul to Singapore, with a marker for how far through this season we are.
-function crossingHtml(t) {
-  const now = new Date();
-  const d = nextDropInfo(now);
-  let open = new Date(d.next.getFullYear(), d.next.getMonth() - 1, 1);
-  while (!DROP_MONTHS.includes(open.getMonth())) open = new Date(open.getFullYear(), open.getMonth() - 1, 1);
-  const pct = Math.min(96, Math.max(4, Math.round(((now - open) / (d.next - open)) * 100)));
-  return `<section class="crossing">
-    <div class="cr-row"><span class="cap muted">${t.crossing}</span><span class="cap muted">${t.crossNote}</span></div>
-    <div class="cr-route" aria-hidden="true"><span class="cr-done" style="width:${pct}%"></span><span class="cr-end" style="left:0"></span><span class="cr-ship" style="left:${pct}%"></span><span class="cr-end" style="left:100%"></span></div>
-    <div class="cr-row">
-      <div><div class="mono small muted">37.56° N</div><div class="cr-place">${t.seoul}</div></div>
-      <div style="text-align:center"><div class="mono small muted">4,630 KM</div><div class="cr-place">${t.atSea}</div></div>
-      <div style="text-align:right"><div class="mono small muted">1.35° N</div><div class="cr-place">${t.singapore}</div></div>
+      <div class="vh-links"><button class="vh-link cap" data-action="nav" data-view="drop">${t.seeSix(vol.length)}</button><button class="vh-link dim cap" data-action="goCat" data-cat="all">${t.shopEverything(PRODUCTS.length)}</button></div>
     </div>
   </section>`;
 }
@@ -379,61 +344,204 @@ function volCard(p, t, i, n) {
   </article>`;
 }
 
+// The crossing: the real route from Seoul to Singapore, drawn on a quiet
+// nautical grid. Stops reuse the brand's route copy (T.pr). The red marker is
+// the season clock: how far we are towards the next volume.
+const XING_ROUTE = [[126.5, 37.45], [125.2, 35.6], [124.4, 33.2], [123.2, 30], [121.4, 26.6], [119.4, 23.4], [116.6, 19.8], [113, 14.6], [109.8, 9.6], [106.6, 5.2], [104.2, 1.5]];
+const xy = ([lon, lat]) => [60 + (lon - 100) * 36, 440 - lat * 10];
+function splinePath(pts) {
+  const p = pts.map(xy);
+  let d = `M${p[0][0].toFixed(1)} ${p[0][1].toFixed(1)}`;
+  for (let i = 0; i < p.length - 1; i++) {
+    const a = p[i - 1] || p[i], b = p[i], c = p[i + 1], e = p[i + 2] || c;
+    const c1 = [b[0] + (c[0] - a[0]) / 6, b[1] + (c[1] - a[1]) / 6], c2 = [c[0] - (e[0] - b[0]) / 6, c[1] - (e[1] - b[1]) / 6];
+    d += ` C${c1[0].toFixed(1)} ${c1[1].toFixed(1)} ${c2[0].toFixed(1)} ${c2[1].toFixed(1)} ${c[0].toFixed(1)} ${c[1].toFixed(1)}`;
+  }
+  return d;
+}
+function seasonInfo(now = new Date()) {
+  const d = nextDropInfo(now);
+  let open = new Date(d.next.getFullYear(), d.next.getMonth() - 1, 1);
+  while (!DROP_MONTHS.includes(open.getMonth())) open = new Date(open.getFullYear(), open.getMonth() - 1, 1);
+  const date = d.next.toLocaleDateString(state.lang === 'ko' ? 'ko-KR' : 'en-SG', { day: 'numeric', month: 'long' });
+  return { ...d, date, frac: Math.min(0.97, Math.max(0.03, (now - open) / (d.next - open))) };
+}
+function crossingHtml(t) {
+  const si = seasonInfo();
+  const [seoul, sea, sg] = t.pr;
+  const pct = (v, max) => (v / max * 100).toFixed(2) + '%';
+  const lats = [[37.5, '37.5°N'], [30, '30°N'], [20, '20°N'], [10, '10°N'], [1.35, '1.35°N']];
+  const lons = [[105, '105°E'], [115, '115°E'], [125, '125°E']];
+  const [sx, sy] = xy(XING_ROUTE[0]), [gx, gy] = xy(XING_ROUTE[XING_ROUTE.length - 1]);
+  const seas = [[t.seaNames[0], 119.6, 33.4], [t.seaNames[1], 124.6, 28.6], [t.seaNames[2], 117.2, 8.6]];
+  return `<section class="xing" aria-labelledby="xing-h">
+    <div class="xing-map">
+      <svg viewBox="0 0 1200 460" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        ${lats.map(([l, lab]) => `<line class="xg" x1="0" x2="1200" y1="${440 - l * 10}" y2="${440 - l * 10}"/><text class="xg-t" x="1192" y="${440 - l * 10 - 6}" text-anchor="end">${lab}</text>`).join('')}
+        ${lons.map(([l, lab]) => `<line class="xg xg-v" y1="0" y2="460" x1="${60 + (l - 100) * 36}" x2="${60 + (l - 100) * 36}"/><text class="xg-t" x="${60 + (l - 100) * 36 + 6}" y="454">${lab}</text>`).join('')}
+        ${seas.map(([n, lon, lat]) => { const [x, y] = xy([lon, lat]); return `<text class="xg-sea" x="${x}" y="${y}">${n}</text>`; }).join('')}
+        <path class="xr-wake" d="${splinePath(XING_ROUTE)}"/>
+        <path class="xr" id="xr" d="${splinePath(XING_ROUTE)}"/>
+        <circle class="xr-port" cx="${sx}" cy="${sy}" r="6"/><circle class="xr-port" cx="${gx}" cy="${gy}" r="6"/>
+        <g class="xr-ship" id="xr-ship" data-frac="${si.frac.toFixed(3)}"><circle r="16" class="xr-halo"/><circle r="6.5" class="xr-dot"/></g>
+      </svg>
+      <div class="xs xs-seoul" style="right:${pct(1200 - sx + 22, 1200)};top:${pct(sy - 62, 460)}"><div class="mono small">${seoul[0]}</div><div class="xs-h">${seoul[1]}</div><p>${seoul[2]}</p></div>
+      <div class="xs xs-sea" style="left:${pct(xy([117.6, 20])[0] + 34, 1200)};top:${pct(xy([117.6, 20])[1] + 6, 460)}"><div class="mono small">${sea[0]}</div><div class="xs-h">${sea[1]}</div><p>${sea[2]}</p></div>
+      <div class="xs xs-sg" style="left:${pct(gx + 26, 1200)};top:${pct(gy - 52, 460)}"><div class="mono small">${sg[0]}</div><div class="xs-h">${sg[1]}</div><p>${sg[2]}</p></div>
+    </div>
+    <div class="xing-head">
+      <div class="cap xk">${t.xingKicker}</div>
+      <h2 class="xh" id="xing-h">${esc(t.xingH)}</h2>
+      <p class="xb">${esc(t.xingB)}</p>
+      <div class="xnext"><span class="xnext-dot"></span>${t.xingNext(si.vol, si.date, si.days)}</div>
+    </div>
+    <ol class="xs-list">${t.pr.map(([n, h, b]) => `<li><span class="mono small">${n}</span><span class="xs-h">${h}</span><span>${b}</span></li>`).join('')}</ol>
+  </section>`;
+}
+// Places the season marker on the drawn route, and draws the route once.
+let xingDrawn = false;
+function placeXing() {
+  const path = document.getElementById('xr'), ship = document.getElementById('xr-ship');
+  if (!path || !ship || !path.getTotalLength) return;
+  const len = path.getTotalLength();
+  const at = path.getPointAtLength(len * Number(ship.dataset.frac));
+  ship.setAttribute('transform', `translate(${at.x.toFixed(1)} ${at.y.toFixed(1)})`);
+  if (xingDrawn || window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) { xingDrawn = true; return; }
+  path.style.strokeDasharray = path.style.strokeDashoffset = len;
+  ship.style.opacity = 0;
+  const io = new IntersectionObserver((es) => {
+    if (!es[0].isIntersecting) return;
+    io.disconnect(); xingDrawn = true;
+    const p = document.getElementById('xr'), sh = document.getElementById('xr-ship');
+    if (!p) return;
+    p.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], { duration: 2200, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' });
+    sh.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 500, delay: 1600, fill: 'forwards' });
+  }, { threshold: 0.35 });
+  io.observe(path.closest('.xing'));
+}
+
+function catTilesHtml(t) {
+  return CATS.map((c) => `<button class="cat-tile" data-action="goCat" data-cat="${c}">
+      <span class="cat-img"><img src="${CAT_IMAGES[c]}" alt="" loading="lazy" decoding="async"></span>
+      <span class="cat-row"><span class="cat-name">${dotHtml(CAT_COLOR[c])}${t.cats[c]}</span><span class="mono small muted">${String(PRODUCTS.filter((p) => p.cat === c).length).padStart(2, '0')} →</span></span>
+      <span class="cat-desc">${t.catDesc[c]}</span>
+    </button>`).join('');
+}
+
+function homeStoryHtml(t) {
+  const post = POSTS[0];
+  if (!post) return '';
+  const look = postLook(post);
+  return `<div class="home-story">
+    <button class="hs-img" style="background:${look.bg}" data-action="openArticle" data-id="${post.id}">${mediaHtml(look, false)}</button>
+    <div class="hs-text">
+      <div class="cap flex-c hs-meta"><span class="flex-c">${dotHtml(CAT_COLOR[post.cat] || '#C1272D')}${t.cats[post.cat]}</span><span>${post.date}</span><span>${post.read}</span></div>
+      <button class="hs-title" data-action="openArticle" data-id="${post.id}">${esc(post.title[state.lang])}</button>
+      <p class="hs-dek">${esc(post.dek[state.lang])}</p>
+      <button class="btn-outline-dark cap" data-action="openArticle" data-id="${post.id}">${t.readStory} →</button>
+      <button class="hs-more" data-action="nav-journal"><span class="cap muted">${t.journal}</span><span>${t.jMore(POSTS.length)} →</span></button>
+    </div>
+  </div>`;
+}
+
+function whyHtml(t) {
+  const items = t.why(sgd(FREE_SHIP));
+  return `<div class="why">
+    <div class="why-lead">
+      <p class="why-h">${esc(t.houseH)}</p>
+      <p class="why-b">${esc(t.houseB)}</p>
+      <div class="why-name"><img src="assets/haemun-mark.png" alt="" width="44" height="44" loading="lazy"><span>${esc(t.whyName)}</span></div>
+      <button class="link-btn" data-action="nav-about">${t.aboutMore} →</button>
+    </div>
+    <div class="why-grid">
+      ${items.map(([h, b, act, label]) => `<div class="why-item"><div class="why-ih">${h}</div><p>${b}</p>${act ? `<button class="link-btn small" data-action="${act}">${label} →</button>` : ''}</div>`).join('')}
+    </div>
+  </div>`;
+}
+
 function homeHtml(t) {
   const volProducts = volumePicks();
-  const vc = (p, i) => volCard(p, t, i, volProducts.length);
-  const catTiles = CATS.map((c, i) => {
-    const f = PRODUCTS.find((p) => p.cat === c && p.vol) || PRODUCTS.find((p) => p.cat === c);
-    const img = f ? `<span class="cat-img" style="aspect-ratio:3 / 4;background:${f.bg}">${mediaHtml(f, false)}<span class="cap ov-tl">0${i + 1}</span></span>` : `<span class="cat-img" style="aspect-ratio:3 / 4;background:#ECECE9"><span class="cap ov-tl">0${i + 1}</span></span>`;
-    return `<button class="cat-tile" data-action="goCat" data-cat="${c}">
-      ${img}
-      <span class="cat-row"><span class="flex-c" style="font-size:14px;font-weight:500">${dotHtml(CAT_COLOR[c])}${t.cats[c]}</span><span class="mono small muted">${String(PRODUCTS.filter((p) => p.cat === c).length).padStart(2, '0')} →</span></span>
-      <span class="cat-ko">${t.catDesc[c]}</span>
-    </button>`;
-  }).join('');
-  const posts = POSTS.slice(0, 3).map((j) => postCard(j, t, 360)).join('');
   return `
   ${volHeroHtml(t, volProducts)}
-  ${coverBandHtml(t)}
   ${crossingHtml(t)}
+
+  <section class="sec">
+    ${sechead('01', t.catH, t.catSub, 'goCat', t.enterMall)}
+    <div class="grid5 cat-grid" style="margin-top:40px">${catTilesHtml(t)}</div>
+  </section>
+
+  <section class="sec">
+    ${sechead('02', t.jH, t.jSub, 'nav-journal', t.jAll)}
+    ${homeStoryHtml(t)}
+  </section>
+
+  <section class="sec">
+    ${sechead('03', t.whyH, t.whySub, 'nav-about', t.aboutMore)}
+    ${whyHtml(t)}
+  </section>`;
+}
+
+// The current volume's own page: what's in it, and how drops work.
+function dropHtml(t) {
+  const vol = volumePicks();
+  const h = VOLUME.hero;
+  const season = VOLUME.season[state.lang] || VOLUME.season.en;
+  return `
+  <section class="sec-tight">
+    <div class="cap muted">HAEMUN / ${t.volume}</div>
+    <div class="drop-head">
+      <div>
+        <div class="cap vh-kicker drop-kicker"><span class="vh-live"></span>${t.heroKicker(VOLUME.no, season)}</div>
+        <h1 class="drop-h1">${t.volume}</h1>
+      </div>
+      <div class="drop-intro">
+        <p>${esc(t.volIntro)}</p>
+        <div class="drop-links"><button class="link-btn" data-action="scrollDrops">${t.howDrops} ↓</button><button class="link-btn" data-action="nav" data-view="drops">${t.pastDrops} →</button></div>
+      </div>
+    </div>
+  </section>
+  <div class="drop-cover"><picture><source media="(max-width: 760px)" srcset="${h.tall}"><img src="${h.wide}" alt="${esc(t.heroAlt)}"></picture></div>
 
   <section class="sec sec-vol">
     ${sechead('01', t.volTitle, t.volSub, 'goCat', t.shopAll)}
-    <div class="vrail" id="volume">${state.loading ? skeletons(3, '4 / 5') : volProducts.map((p, i) => vc(p, i)).join('')}</div>
-    <div id="drops">${dropsHtml(t)}</div>
+    <div class="grid3 vol-grid" id="volume" style="margin-top:40px">${state.loading ? skeletons(3, '4 / 5') : vol.map((p, i) => volCard(p, t, i, vol.length)).join('')}</div>
   </section>
 
-  <section class="sec">
-    ${sechead('02', t.catH, t.catSub, 'goCat', t.enterMall)}
-    <div class="grid5" style="margin-top:40px">${catTiles}</div>
-  </section>
-
-  <section class="sec">
-    ${sechead('03', t.jH, t.jSub, 'nav-journal', t.jAll)}
-    <div class="grid3" style="margin-top:40px">${posts}</div>
-  </section>
-
-  <section class="sec">
-    ${sechead('04', t.houseEyebrow, t.houseSub, 'nav-about', t.aboutMore)}
-    <div class="house-grid" style="margin-top:40px">
-      <div class="house-panel">
-        <img class="house-mark" src="assets/haemun-mark-white.png" alt="Haemun emblem" loading="lazy">
-        <span class="cap ov-tl muted2">海門 · SEA GATE</span>
-      </div>
-      <div class="house-text">
-        <div>
-          <div class="house-h">${esc(t.houseH)}</div>
-          <p class="house-b">${esc(t.houseB)}</p>
-          <button class="btn-outline-dark cap" data-action="nav-about">${t.aboutMore} →</button>
-        </div>
-        <div class="house-stats">
-          <div><div class="stat-n">05</div><div class="stat-l">${t.statA}</div></div>
-          <div><div class="stat-n">100%</div><div class="stat-l">${t.statB}</div></div>
-        </div>
-      </div>
-    </div>
+  <section class="sec" id="drops">
+    ${sechead('02', t.dropsH, t.dropsSub, 'nav-drops', t.pastDrops)}
+    ${dropsHtml(t)}
   </section>`;
 }
+
+// Past drops: a placeholder until Volume 02 opens and Volume 01 closes.
+function dropsArchiveHtml(t) {
+  const si = seasonInfo();
+  const season = VOLUME.season[state.lang] || VOLUME.season.en;
+  const nextSeason = DROP_MONTHS.length === 12 ? '' : t.seasons[si.next.getMonth()];
+  return `
+  <section class="sec-tight">
+    <div class="cap muted">HAEMUN / ${t.pastDrops}</div>
+    <div class="shop-head"><div class="flex-b" style="align-items:baseline;gap:16px"><span class="shop-title">${t.pastDrops}</span><span class="muted">${t.pastIntro}</span></div></div>
+  </section>
+  <section class="sec-tight">
+    <div class="archive">
+      <button class="arc-card" data-action="nav" data-view="drop">
+        <span class="arc-img"><img src="${VOLUME.hero.wide}" alt="" loading="lazy"></span>
+        <span class="cap arc-meta"><span class="flex-c"><span class="vh-live"></span>${t.openNow}</span><span>${season}</span></span>
+        <span class="arc-title">${t.volume}</span>
+        <span class="link-btn small">${t.viewVolume} →</span>
+      </button>
+      <div class="arc-card arc-next">
+        <span class="arc-img arc-blank"><span class="arc-no">${si.vol}</span></span>
+        <span class="cap arc-meta"><span>${t.comingOn(si.date)}</span><span>${nextSeason}</span></span>
+        <span class="arc-title">${t.volumeN(si.vol)}</span>
+        <span class="muted small">${t.daysLeft(si.days)}</span>
+      </div>
+    </div>
+    <p class="arc-note">${esc(t.pastNote)}</p>
+  </section>`;
+}
+
 
 function mallHtml(t) {
   const live = PRODUCTS.some((p) => p.id.startsWith('wc'));
@@ -583,21 +691,10 @@ function aboutHtml(t) {
 
 function routeAndFooter(t) {
   return `
-  <section class="route">
-    <div class="route-grid">
-      <span class="dashline"></span>
-      ${t.pr.map(([n, h, b], i) => `
-        <div class="route-item">
-          <span class="pin" style="${i === 1 ? 'border:1px solid #FFFFFF;background:#0B0B0C' : 'background:' + (i === 0 ? '#C1272D' : '#FFFFFF')}"></span>
-          <div class="route-hn"><span class="route-h">${h}</span><span class="mono small muted">${n}</span></div>
-          <div class="route-b">${b}</div>
-        </div>`).join('')}
-    </div>
-  </section>
   <footer class="site-footer">
     <div class="f-col f-brand"><img class="f-mark" src="assets/haemun-mark.png" alt="" width="64" height="64" loading="lazy"><img class="f-logo" src="assets/haemun-wordmark.png" alt="Haemun" width="110" height="21" loading="lazy"><div class="muted">${t.footer}</div></div>
     <div class="f-col"><div class="f-h">${t.shop}</div>${CATS.map((c) => `<button class="tlink f-link" data-action="goCat" data-cat="${c}">${t.cats[c]}</button>`).join('')}</div>
-    <div class="f-col"><div class="f-h">${t.fHouse}</div><button class="tlink f-link" data-action="nav" data-view="journal">${t.journal}</button><button class="tlink f-link" data-action="nav" data-view="about">${t.about}</button><button class="tlink f-link" data-action="enableTrade">${t.trade}</button></div>
+    <div class="f-col"><div class="f-h">${t.fHouse}</div><button class="tlink f-link" data-action="nav" data-view="drop">${t.volume}</button><button class="tlink f-link" data-action="nav" data-view="drops">${t.pastDrops}</button><button class="tlink f-link" data-action="nav" data-view="journal">${t.journal}</button><button class="tlink f-link" data-action="nav" data-view="about">${t.about}</button><button class="tlink f-link" data-action="enableTrade">${t.trade}</button></div>
     <div class="f-col"><div class="f-h">${t.fHelp}</div><div class="muted">${t.fShip}<br>${t.fReturns}<br>${t.fContact}</div></div>
     <div class="f-col"><div class="f-h">Singapore</div><div class="muted">Haemun Pte. Ltd.<br>[ADDRESS]<br>© 2026</div></div>
   </footer>`;
@@ -695,7 +792,9 @@ function cartHtml(t) {
 function render() {
   const t = T[state.lang];
   let body = '';
-  if (state.view === 'volume') body = homeHtml(t);
+  if (state.view === 'home') body = homeHtml(t);
+  else if (state.view === 'drop') body = dropHtml(t);
+  else if (state.view === 'drops') body = dropsArchiveHtml(t);
   else if (state.view === 'mall') body = mallHtml(t);
   else if (state.view === 'journal') body = journalHtml(t);
   else if (state.view === 'article') {
@@ -720,13 +819,15 @@ function render() {
   if (video && videoAt) video.currentTime = videoAt;
   playIntro();
   syncHeader();
+  placeXing();
+  showPick();
 }
 
 
 // The header sits transparent on the hero (desktop only) until the hero
 // scrolls away.
 function filmHeader() {
-  if (state.view !== 'volume' || window.innerWidth <= 760) return false;
+  if (state.view !== 'home' || window.innerWidth <= 760) return false;
   return !!document.querySelector('.vhero') && window.scrollY < 40;
 }
 function syncHeader() {
@@ -736,11 +837,23 @@ function syncHeader() {
 window.addEventListener('scroll', syncHeader, { passive: true });
 window.addEventListener('resize', syncHeader);
 
+// Arriving from a hero chip: bring that piece into view and mark it.
+function showPick() {
+  if (!state.pick || state.view !== 'drop' || state.loading) return;
+  const card = document.getElementById('vc-' + state.pick);
+  state.pick = null;
+  if (!card) return;
+  requestAnimationFrame(() => {
+    window.scrollTo({ top: card.getBoundingClientRect().top + scrollY - 120, behavior: 'smooth' });
+    card.classList.add('vc-pick');
+  });
+}
+
 // One orchestrated moment: the cover settles in on first view, and never
 // replays on later re-renders.
 let introPlayed = false;
 function playIntro() {
-  if (introPlayed || state.view !== 'volume') return;
+  if (introPlayed || state.view !== 'home') return;
   const media = document.querySelector('.vh-media'), copy = document.querySelector('.vh-copy');
   if (!media || !copy) return;
   introPlayed = true;
@@ -757,6 +870,7 @@ document.addEventListener('click', (e) => {
   if (a === 'nav') go({ view: el.dataset.view, postId: null });
   else if (a === 'nav-journal') go({ view: 'journal', postId: null });
   else if (a === 'nav-about') go({ view: 'about' });
+  else if (a === 'nav-drops') go({ view: 'drops' });
   else if (a === 'setCat') { go({ view: 'mall', cat: el.dataset.cat, origin: 'all' }); return; }
   else if (a === 'goCat') go({ view: 'mall', cat: el.dataset.cat || 'all', origin: 'all' });
   else if (a === 'openArticle') go({ view: 'article', postId: el.dataset.id });
@@ -798,17 +912,8 @@ document.addEventListener('click', (e) => {
   else if (a === 'toggleTrade') setState({ b2b: !state.b2b });
   else if (a === 'enableTrade') { setState({ b2b: true }); window.scrollTo(0, 0); }
   else if (a === 'setLang') setState({ lang: el.dataset.lang });
-  else if (a === 'volPick') {
-    const card = document.getElementById('vc-' + el.dataset.id);
-    if (card) {
-      window.scrollTo({ top: card.getBoundingClientRect().top + scrollY - 140, behavior: 'smooth' });
-      const rail = card.parentElement;
-      rail.scrollTo({ left: card.offsetLeft - parseFloat(getComputedStyle(rail).paddingLeft), behavior: 'smooth' });
-      card.classList.remove('vc-pick'); void card.offsetWidth; card.classList.add('vc-pick');
-    }
-  }
+  else if (a === 'volPick') { state.pick = el.dataset.id; go({ view: 'drop', postId: null }); }
   else if (a === 'scrollDrops') { const d = document.getElementById('drops'); if (d) window.scrollTo({ top: d.getBoundingClientRect().top + scrollY - 120, behavior: 'smooth' }); }
-  else if (a === 'scrollHint') { const v = document.getElementById('volume'); if (v) window.scrollTo({ top: v.getBoundingClientRect().top + scrollY - 120, behavior: 'smooth' }); }
 });
 
 Object.assign(state, fromHash());

@@ -41,9 +41,20 @@ const VOL1 = { year: 2026, month: 8 }; // Volume 01: Autumn 2026
 //   hero.film               full film with sound, opened by "Watch the film"
 //   starts                  optional "Start here if..." line per product id;
 //                           otherwise the category's line in T.startCat is used
+// Placeholder category photos for "Shop by category" on the home page.
+// General scenes on purpose, so they don't read as any one volume.
+const CAT_IMAGES = {
+  beauty: 'assets/categories/beauty.jpg', fashion: 'assets/categories/fashion.jpg', wellness: 'assets/categories/wellness.jpg',
+  pet: 'assets/categories/pet.jpg', medical: 'assets/categories/medical.jpg',
+};
+
 const VOLUME = {
   no: '01',
   season: { en: 'Autumn 2026', ko: '2026 가을' },
+  intro: {
+    en: 'Six pieces, one from each category, chosen in person in Korea this autumn. Each is made in a small batch, so when a piece sells out it is gone until its maker makes more.',
+    ko: '이번 가을 한국에서 직접 고른, 카테고리마다 하나씩 여섯 가지 제품입니다. 모두 소량 생산이라 품절되면 메이커가 다시 만들 때까지 구할 수 없습니다.',
+  },
   hero: {
     wide: 'assets/volumes/vol-01-hero-wide.jpg',
     tall: 'assets/volumes/vol-01-hero-tall.jpg',
@@ -349,6 +360,23 @@ const T = {
 
 // Landing page (volume hero, cover band, "Six ways in").
 Object.assign(T.en, {
+  xingKicker: 'The crossing', xingH: 'Every piece makes the same crossing.',
+  xingB: 'From a maker in Korea to your door in Singapore: 4,630 km by sea, with every batch documented and cleared before it is listed.',
+  xingNext: (vol, date, days) => `Where we are this season: Volume ${vol} opens ${date}, ${days} days to go`,
+  seaNames: ['YELLOW SEA', 'EAST CHINA SEA', 'SOUTH CHINA SEA'],
+  jMore: (n) => `All ${n} stories in the Journal`,
+  whyH: 'Shopping with Haemun', whySub: 'What to know before your first order',
+  whyName: 'Haemun (海門) means sea gate. Read in English, hae is also SEA: Southeast Asia.',
+  why: (free) => [
+    [`Free delivery over ${free}`, 'Shipped from Korea, delivered across Singapore and Southeast Asia.'],
+    ['PayNow or card', 'Secure checkout through our store. Prices include 9% Singapore GST.'],
+    ['Small batches', 'Every piece is made in the quantity its maker can make well. When a batch sells out, it is gone until they make more.'],
+    ['For trade', 'Retailers, clinics and stockists see wholesale tiers, minimum orders and compliance dossiers.', 'enableTrade', 'Switch to trade view'],
+  ],
+  volIntro: VOLUME.intro.en, howDrops: 'How drops work', dropsH: 'How the drops work', dropsSub: 'A new volume every season',
+  pastDrops: 'Past drops', pastIntro: 'Every volume stays on record here after it closes.',
+  pastNote: 'Volume 01 is our first. When Volume 02 opens, Volume 01 moves here, and its pieces stay in the shop while stock lasts.',
+  openNow: 'Open now', viewVolume: 'View volume', comingOn: (date) => `Opens ${date}`, volumeN: (vol) => `Volume ${vol}`,
   volTitle: 'Six ways in', volSub: 'One piece from each category, chosen in person. Pick the one that sounds like you.',
   heroKicker: (vol, season) => `Volume ${vol} · ${season} · Open now`,
   heroH: 'Start\nwith six.',
@@ -371,6 +399,23 @@ Object.assign(T.en, {
   },
 });
 Object.assign(T.ko, {
+  xingKicker: '바다를 건너', xingH: '모든 제품은 같은 바다를 건넙니다.',
+  xingB: '한국의 메이커에서 싱가포르의 문 앞까지, 바닷길 4,630km. 모든 배치는 기록되고 통관을 마친 뒤에야 등록됩니다.',
+  xingNext: (vol, date, days) => `이번 시즌의 위치: 제${Number(vol)}호 ${date} 공개, ${days}일 남음`,
+  seaNames: ['황해', '동중국해', '남중국해'],
+  jMore: (n) => `저널의 이야기 ${n}편 모두 보기`,
+  whyH: '해문에서 쇼핑하기', whySub: '첫 주문 전에 알아 두세요',
+  whyName: '해문(海門)은 바다의 문이라는 뜻입니다. 영어로 읽으면 "해"는 SEA, 곧 동남아시아이기도 합니다.',
+  why: (free) => [
+    [`${free} 이상 무료 배송`, '한국에서 직송해 싱가포르와 동남아시아 전역으로 배송합니다.'],
+    ['PayNow 또는 카드 결제', '저희 스토어의 보안 결제를 이용합니다. 가격에는 싱가포르 GST 9%가 포함되어 있습니다.'],
+    ['소량 생산', '모든 제품은 메이커가 잘 만들 수 있는 만큼만 만듭니다. 배치가 품절되면 다시 만들 때까지 구할 수 없습니다.'],
+    ['입점 문의', '리테일러, 클리닉, 스토키스트는 도매가, 최소 주문 수량, 규정 준수 자료를 볼 수 있습니다.', 'enableTrade', '트레이드 보기로 전환'],
+  ],
+  volIntro: VOLUME.intro.ko, howDrops: '드롭 방식', dropsH: '드롭 방식', dropsSub: '매 시즌 새로운 호',
+  pastDrops: '지난 드롭', pastIntro: '마감된 호는 모두 이곳에 기록으로 남습니다.',
+  pastNote: '제1호는 저희의 첫 호입니다. 제2호가 공개되면 제1호는 이곳으로 옮겨지고, 제품은 재고가 남아 있는 동안 숍에서 계속 판매됩니다.',
+  openNow: '지금 공개', viewVolume: '호 보기', comingOn: (date) => `${date} 공개`, volumeN: (vol) => `제${Number(vol)}호`,
   volTitle: '여섯 가지 입문', volSub: '카테고리마다 하나씩, 직접 고른 제품입니다. 마음에 드는 것부터 시작하세요.',
   heroKicker: (vol, season) => `제${Number(vol)}호 · ${season} · 지금 공개`,
   heroH: '여섯 가지로\n시작하기.',
