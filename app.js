@@ -461,8 +461,7 @@ function homeStoryHtml(t) {
       <div class="cap flex-c hs-meta"><span class="flex-c">${dotHtml(CAT_COLOR[post.cat] || '#C1272D')}${t.cats[post.cat]}</span><span>${post.date}</span><span>${post.read}</span></div>
       <button class="hs-title" data-action="openArticle" data-id="${post.id}">${esc(post.title[state.lang])}</button>
       <p class="hs-dek">${esc(post.dek[state.lang])}</p>
-      <button class="btn-outline-dark cap" data-action="openArticle" data-id="${post.id}">${t.readStory} →</button>
-      <button class="hs-more" data-action="nav-journal"><span class="cap muted">${t.journal}</span><span>${t.jMore(POSTS.length)} →</span></button>
+      <div class="hs-links"><button class="btn-outline-dark cap" data-action="openArticle" data-id="${post.id}">${t.readStory} →</button><button class="link-btn" data-action="nav-journal">${t.jMore(POSTS.length)} →</button></div>
     </div>
   </div>`;
 }
