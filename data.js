@@ -129,7 +129,7 @@ async function loadProducts() {
     ]);
     if (!res.ok) throw new Error('WooCommerce Store API request failed: ' + res.status);
     const items = await res.json();
-    if (!Array.isArray(items) || !items.length) { LIVE_STATUS = 'empty'; return; } // keep mock fallback
+    if (!Array.isArray(items) || !items.length) { LIVE_STATUS = 'empty'; return; }
     const featured = new Set(featRes && featRes.ok ? (await featRes.json()).map((p) => p.id) : []);
     const mapped = items.map((p, i) => ({ ...mapWcProduct(p), arrival: i, featured: featured.has(p.id) }));
     if (items[0].prices && items[0].prices.currency_code) STORE_CURRENCY = items[0].prices.currency_code;
@@ -138,7 +138,7 @@ async function loadProducts() {
     LIVE_STATUS = 'live';
   } catch (err) {
     LIVE_STATUS = 'failed';
-    console.error('Haemun: could not load WooCommerce products from ' + WC_STORE_API + ' (' + err.message + '). If this is a CORS error, check the Access-Control rules in functions.php. Showing sample products.');
+    console.error('Haemun: could not load WooCommerce products from ' + WC_STORE_API + ' (' + err.message + '). If this is a CORS error, check the Access-Control rules in functions.php.');
   }
 }
 
@@ -200,106 +200,22 @@ async function loadPosts() {
     const res = await fetch(`${WP_API}/posts?_embed=wp:featuredmedia,wp:term&per_page=20`);
     if (!res.ok) throw new Error('WordPress posts request failed: ' + res.status);
     const items = await res.json();
-    if (!Array.isArray(items) || !items.length) return; // keep hardcoded fallback
+    if (!Array.isArray(items) || !items.length) { POSTS_STATUS = 'empty'; return; }
     POSTS.length = 0;
     POSTS.push(...items.map(mapWpPost));
+    POSTS_STATUS = 'live';
   } catch (err) {
-    console.error('Haemun: could not load WordPress posts (' + err.message + '). Showing sample stories.');
+    POSTS_STATUS = 'failed';
+    console.error('Haemun: could not load WordPress posts (' + err.message + ').');
   }
 }
 
-let PRODUCTS = [
-  { id: 'p1', vol: true, cat: 'beauty', shape: 'jar', bg: '#DEDEDA', fill: '#0B0B0C', price: 54, name: 'Chungdam Cellular Barrier Cream', ko: '청담 셀룰러 배리어 크림', origin: 'Seoul, Gangnam', moq: 48,
-    teaser: 'Ceramide and peptide balm, developed with Cheongdam dermatology clinics.',
-    form: [['Key actives', 'Ceramide NP 3%, 5-peptide complex, panthenol'], ['Texture', 'Dense balm-cream, 50 ml'], ['Free of', 'Synthetic fragrance, mineral oil, parabens']],
-    prov: [['Atelier', 'Independent laboratory, Cheongdam-dong'], ['Batch', 'Small batch, 1,200 units per run'], ['Story', 'Developed for post-laser recovery, now for everyday use.']] },
-  { id: 'p3', vol: true, cat: 'beauty', shape: 'dropper', bg: '#D9DCD8', fill: '#5A3B22', price: 42, name: 'Jeju Artemisia Calming Ampoule', ko: '제주 쑥 진정 앰플', origin: 'Jeju Island', moq: 60,
-    teaser: 'Mugwort grown on basalt soil, cold-pressed on the island.',
-    form: [['Key actives', 'Jeju artemisia 78%, madecassoside, allantoin'], ['Texture', 'Watery serum, 30 ml amber glass'], ['Free of', 'Alcohol, essential oils']],
-    prov: [['Atelier', 'Farm cooperative, Jeju'], ['Batch', 'Spring harvest, pressed within 24 hours']] },
-  { id: 'p5', cat: 'beauty', shape: 'box', bg: '#D2D5D2', fill: '#2F4A3A', price: 38, name: 'Pine Needle Bio-Peptide Cleanser', ko: '솔잎 바이오 펩타이드 클렌저', origin: 'Gangwon', moq: 72,
-    teaser: 'Red pine from the Pyeongchang highlands, in a low-pH gel.',
-    form: [['Key actives', 'Red pine needle extract, copper tripeptide-1'], ['Texture', 'Low-pH gel to foam, 150 ml']],
-    prov: [['Atelier', 'Forest laboratory, Pyeongchang']] },
-  { id: 'b4', cat: 'beauty', shape: 'bottle', bg: '#E2E1DD', fill: '#8C6A3A', price: 58, name: 'Jeju Camellia Body Oil', ko: '제주 동백 바디 오일', origin: 'Jeju Island', moq: 48,
-    teaser: 'Cold-pressed camellia seed oil for body and hair.',
-    form: [['Key actives', 'Camellia japonica seed oil, vitamin E'], ['Format', '100 ml glass bottle']],
-    prov: [['Atelier', 'Camellia grove press, Seogwipo']] },
-  { id: 'f1', vol: true, cat: 'fashion', shape: 'tee', bg: '#E4E3DF', fill: '#2B2B2D', price: 320, name: 'Hanji-Fibre Knit Cardigan', ko: '한지 원사 니트 가디건', origin: 'Seoul, Seongsu', moq: 12,
-    teaser: 'Knitted from mulberry-paper yarn. Light, cool and structured.',
-    form: [['Material', 'Hanji paper yarn 70%, cotton 30%'], ['Fit', 'Relaxed, dropped shoulder'], ['Care', 'Cold hand wash, dry flat']],
-    prov: [['Atelier', 'Knit studio, Seongsu-dong'], ['Yarn', 'Mulberry paper spun in Jeonju']] },
-  { id: 'f2', cat: 'fashion', shape: 'tee', bg: '#DCDAD3', fill: '#CFC6B3', price: 240, name: 'Andong Ramie Summer Shirt', ko: '안동포 여름 셔츠', origin: 'Andong', moq: 12,
-    teaser: 'Hand-woven Andong ramie, the cloth of Korean summers.',
-    form: [['Material', 'Andong ramie 100%'], ['Fit', 'Straight, band collar'], ['Care', 'Hand wash, press damp']],
-    prov: [['Atelier', 'Ramie weavers, Andong']] },
-  { id: 'f3', cat: 'fashion', shape: 'bag', bg: '#D6D6D2', fill: '#1B1B1D', price: 680, name: 'Najeon Lacquer Leather Tote', ko: '나전 옻칠 레더 토트', origin: 'Tongyeong', moq: 6,
-    teaser: 'Vegetable-tanned leather with a mother-of-pearl lacquer clasp.',
-    form: [['Material', 'Vegetable-tanned calfskin, najeon clasp'], ['Size', '38 × 30 × 12 cm'], ['Care', 'Condition every six months']],
-    prov: [['Atelier', 'Najeon lacquer workshop, Tongyeong']] },
-  { id: 'p2', vol: true, cat: 'wellness', shape: 'bottle', bg: '#D4D4D0', fill: '#7A2A22', price: 88, name: 'Red Ginseng Nano-Ferment Elixir', ko: '홍삼 나노 발효 엘릭서', origin: 'Geumsan', moq: 36,
-    teaser: 'Six-year red ginseng, steamed nine times and slowly fermented.',
-    form: [['Key actives', 'Six-year Korean red ginseng, Compound K'], ['Format', '30 × 10 ml vials'], ['Ritual', 'One vial each morning']],
-    prov: [['Atelier', 'Family ginseng house, Geumsan-gun'], ['Batch', 'Nine steamings, clay fermentation']] },
-  { id: 'p4', cat: 'wellness', shape: 'bottle', bg: '#E2E2DF', fill: '#0B0B0C', price: 62, name: 'Black Sesame & Biotin Tonic', ko: '흑임자 비오틴 토닉', origin: 'Seoul, Mapo', moq: 48,
-    teaser: 'A family heukimja recipe, rebuilt for hair and scalp.',
-    form: [['Key actives', 'Stone-roasted black sesame, biotin, zinc'], ['Format', '500 ml, 14 servings']],
-    prov: [['Atelier', 'Hanbang tonic studio, Mapo-gu']] },
-  { id: 'p6', cat: 'wellness', shape: 'box', bg: '#E4E3E0', fill: '#C1272D', price: 50, name: 'Inner-Radiance Glutathione Film', ko: '이너 래디언스 글루타치온 필름', origin: 'Seoul, Seongsu', moq: 60,
-    teaser: 'Glutathione that dissolves on the tongue. Thirty films.',
-    form: [['Key actives', 'Reduced L-glutathione 250 mg, vitamin C'], ['Format', '30 orally dissolving films']],
-    prov: [['Atelier', 'Nutraceutical studio, Seongsu-dong']] },
-  { id: 't1', cat: 'pet', shape: 'pouch', bg: '#DEDCD6', fill: '#6B4B2E', price: 34, name: 'Hanwoo Bone Broth for Dogs', ko: '한우 사골 강아지 보양식', origin: 'Hoengseong', moq: 48,
-    teaser: 'Slow-simmered Hanwoo bone broth. No salt, no onion.',
-    form: [['Ingredients', 'Hanwoo beef bone, pumpkin, jujube'], ['Format', '6 × 120 ml pouches'], ['Serve', 'Warm, over dry food']],
-    prov: [['Atelier', 'Hanwoo farm kitchen, Hoengseong']] },
-  { id: 't2', vol: true, cat: 'pet', shape: 'bowl', bg: '#D8DBD8', fill: '#8FA89A', price: 96, name: 'Icheon Celadon Pet Bowl', ko: '이천 청자 반려동물 식기', origin: 'Icheon', moq: 12,
-    teaser: 'Wheel-thrown celadon, raised for easier eating.',
-    form: [['Material', 'Celadon stoneware, lead-free glaze'], ['Size', '16 cm, 450 ml'], ['Care', 'Dishwasher safe']],
-    prov: [['Atelier', 'Kiln workshop, Icheon ceramics village']] },
-  { id: 't3', cat: 'pet', shape: 'jar', bg: '#E3E2DE', fill: '#0B0B0C', price: 28, name: 'Jeju Horse Oil Paw Balm', ko: '제주 마유 발바닥 밤', origin: 'Jeju Island', moq: 72,
-    teaser: 'Horse oil and beeswax for cracked paws and noses.',
-    form: [['Ingredients', 'Jeju horse oil, beeswax, calendula'], ['Format', '30 g tin']],
-    prov: [['Atelier', 'Island apothecary, Jeju']] },
-  { id: 'm1', vol: true, cat: 'medical', service: true, shape: 'card', bg: '#D5DAD8', fill: '#2E6B5E', price: 1850, name: 'Gangnam Dermatology Passage', ko: '강남 피부과 패시지', origin: 'Seoul, Gangnam', moq: 1,
-    teaser: 'Three days: consultation, treatment plan and aftercare, arranged end to end.',
-    form: [['Includes', 'Consultation, two treatment sessions, aftercare kit'], ['Duration', '3 days, 2 nights'], ['Arranged', 'Clinic booking, interpreter, hotel transfer']],
-    prov: [['Provider', '[PARTNER CLINIC], Gangnam-gu'], ['Coordinator', 'Haemun Seoul office']] },
-  { id: 'm2', cat: 'medical', service: true, shape: 'card', bg: '#DADCDB', fill: '#0B0B0C', price: 1400, name: 'Executive Health Screening', ko: '프리미엄 종합 건강검진', origin: 'Seoul, Jongno', moq: 1,
-    teaser: 'A full-day screening with an English-speaking results review.',
-    form: [['Includes', 'Full-body screening, imaging, results review'], ['Duration', '1 day, results in 7 days'], ['Arranged', 'Booking, interpreter, translated report']],
-    prov: [['Provider', '[PARTNER HOSPITAL], Seoul'], ['Coordinator', 'Haemun Seoul office']] },
-  { id: 'm3', cat: 'medical', service: true, shape: 'card', bg: '#D3D7D4', fill: '#7A2A22', price: 2600, name: 'Hanbang Recovery Retreat', ko: '한방 회복 리트릿', origin: 'Jeju Island', moq: 1,
-    teaser: 'Five days of Korean medicine, rest and island air.',
-    form: [['Includes', 'Hanbang consultation, daily treatments, meals'], ['Duration', '5 days, 4 nights'], ['Arranged', 'Retreat booking, transfers']],
-    prov: [['Provider', '[PARTNER RETREAT], Jeju'], ['Coordinator', 'Haemun Seoul office']] },
-];
-const POSTS = [
-  { id: 'j1', cat: 'beauty', product: 'p1', date: '18 SEP 2026', read: '6 MIN', author: 'Haemun Editors',
-    title: { en: 'Inside a Cheongdam laboratory', ko: '청담동 연구실 안에서' },
-    dek: { en: 'How a clinic-born barrier cream is made, one 1,200-unit batch at a time.', ko: '클리닉에서 태어난 배리어 크림이 1,200개 단위로 만들어지는 과정.' },
-    paras: ['The laboratory sits above a dermatology clinic on a quiet Cheongdam side street. Its formulas began as aftercare for laser patients and moved, slowly, into daily use.', 'Every batch is small by design. The team would rather sell out than compromise the ceramide ratio that makes the cream work.', 'We visited in August, tested three batches, and chose the one you see in Volume 01.'] },
-  { id: 'j2', cat: 'fashion', product: 'f2', date: '11 SEP 2026', read: '8 MIN', author: 'Haemun Editors',
-    title: { en: 'Andong ramie, the summer cloth', ko: '안동포, 여름의 옷감' },
-    dek: { en: "A fibre woven by hand for centuries, and why it suits Singapore's climate.", ko: '수백 년 동안 손으로 짜 온 섬유, 그리고 싱가포르 기후에 맞는 이유.' },
-    paras: ['Ramie has been woven in Andong for generations. The fibre is split by hand, joined by mouth and woven on narrow looms.', 'The finished cloth is crisp, breathable and dries quickly: qualities that matter far more in Singapore than in Seoul.', 'Our shirt uses cloth from a single weaving family, cut in Seoul.'] },
-  { id: 'j3', cat: 'wellness', product: 'p2', date: '02 SEP 2026', read: '5 MIN', author: 'Haemun Editors',
-    title: { en: 'Nine steamings in Geumsan', ko: '금산의 구증구포' },
-    dek: { en: 'The slow process that turns white ginseng red.', ko: '백삼을 홍삼으로 바꾸는 느린 과정.' },
-    paras: ['Six-year roots are steamed and dried nine times. Each cycle deepens the colour and changes the compounds inside.', 'The family we work with ferments the result in clay, a step most producers skip.', 'It is slow, and it is the reason the elixir tastes the way it does.'] },
-  { id: 'j4', cat: 'pet', product: 't2', date: '26 AUG 2026', read: '4 MIN', author: 'Haemun Editors',
-    title: { en: 'Pet care, the Seoul way', ko: '서울식 반려동물 케어' },
-    dek: { en: 'Bone broth, celadon bowls and the city that takes its dogs seriously.', ko: '사골, 청자 식기, 그리고 반려견을 진지하게 대하는 도시.' },
-    paras: ['Seoul has some of the most considered pet products in Asia, from Hanwoo broths to hand-thrown bowls.', 'We chose three to start: food, a bowl and a balm, each made by people who make things for humans too.', 'More will follow in Volume 02.'] },
-  { id: 'j5', cat: 'medical', product: 'm1', date: '19 AUG 2026', read: '9 MIN', author: 'Haemun Editors',
-    title: { en: "A first-timer's guide to medical travel in Seoul", ko: '서울 의료 여행 첫걸음' },
-    dek: { en: 'What to expect, what to ask and how we arrange it.', ko: '무엇을 기대하고, 무엇을 묻고, 해문이 어떻게 준비하는지.' },
-    paras: ["Seoul is one of the world's leading destinations for dermatology and health screening. The difficulty is knowing where to go.", 'We work with a small number of providers, arrange bookings and interpreters, and stay in contact from arrival to aftercare.', 'Every package begins with a consultation request. Nothing is booked until you have spoken to the provider.'] },
-  { id: 'j6', cat: 'house', product: null, shape: 'card', bg: '#E2E1DD', fill: '#C1272D', date: '12 AUG 2026', read: '3 MIN', author: 'Haemun',
-    title: { en: 'Volume 01: notes on the first six', ko: '제1호: 첫 여섯 가지에 대한 노트' },
-    dek: { en: 'Why we publish in volumes, and what we chose for the first.', ko: '왜 호 단위로 발행하는지, 그리고 첫 호의 선택.' },
-    paras: ['We publish in volumes because we would rather choose carefully than stock everything.', 'Volume 01 has one object from each of our categories, plus one more beauty piece we could not leave out.', 'The full shop holds everything we carry. The volume holds what we would give a friend.'] },
-];
+// Products and stories load from WooCommerce and WordPress. There is no
+// sample fallback: while they load the page shows neutral placeholders,
+// and if a request fails it says so instead of showing made-up items.
+let PRODUCTS = [];
+const POSTS = [];
+let POSTS_STATUS = 'pending';
 const T = {
   en: { ann1: 'Shipped from Korea to Singapore', ann2: 'Compliance handled for every category',
     volume: 'Volume 01', shop: 'Shop', shopAll: 'Shop all', journal: 'Editorial', about: 'About Haemun', trade: 'Trade', bag: 'Bag',
@@ -338,7 +254,7 @@ const T = {
       ['02', 'Small batches, chosen in person', 'Every piece comes from a maker we visited, in the quantity they can make well. When a batch sells out, it is gone until they make more.'],
       ['03', 'Then into the shop', 'When the next volume opens, earlier pieces move to the shop and stay there while stock lasts.']],
     nextDrop: (vol, season, date) => `Volume ${vol}${season ? ' · ' + season : ''} opens ${date}`, seasons: ['Winter', 'Winter', 'Spring', 'Spring', 'Spring', 'Summer', 'Summer', 'Summer', 'Autumn', 'Autumn', 'Autumn', 'Winter'], daysLeft: (n) => (n === 1 ? '1 day to go' : `${n} days to go`), dropNotes: 'Notes on Volume 01',
-    shopIntro: 'Everything we carry, across five categories.', allOrigins: 'All origins', allBrands: 'All brands', liveFail: 'We couldn\u2019t reach the live store just now, so you\u2019re seeing sample products. Please try again shortly.',
+    shopIntro: 'Everything we carry, across five categories.', allOrigins: 'All origins', allBrands: 'All brands', liveFail: 'We couldn\u2019t reach the store just now. Please refresh in a moment.', storiesFail: 'We couldn\u2019t load the stories just now. Please refresh in a moment.',
     search: 'Search', searchPh: 'Search products, makers, categories', noResults: 'Nothing found. Try a category or maker name.', brand: 'Brand', demoNote: 'These are sample products and can\u2019t be purchased yet.', toCheckout: 'Taking you to secure checkout\u2026',
     empty: 'Your bag is empty.', subtotal: 'Subtotal', gst: 'Prices include 9% Singapore GST', checkout: 'Proceed to PayNow / Card',
     pr: [['37.56N', 'Seoul', 'Chosen in person. Fewer than one in twenty makers make it.'], ['4,630 KM', 'At sea', 'Batch records and cold-chain data travel with every shipment.'], ['1.35N', 'Singapore', 'Cleared and compliant for its category before anything is listed.']] },
@@ -379,7 +295,7 @@ const T = {
       ['02', '직접 고른 소량 생산', '모든 제품은 직접 방문한 메이커가 잘 만들 수 있는 만큼만 만듭니다. 배치가 소진되면 다음 생산까지 기다려야 합니다.'],
       ['03', '그다음은 숍으로', '다음 호가 열리면 이전 제품은 숍으로 옮겨져 재고가 있는 동안 판매됩니다.']],
     nextDrop: (vol, season, date) => `제${vol}호${season ? ' · ' + season : ''} ${date} 공개`, seasons: ['겨울', '겨울', '봄', '봄', '봄', '여름', '여름', '여름', '가을', '가을', '가을', '겨울'], daysLeft: (n) => `${n}일 남음`, dropNotes: '제1호 노트 읽기',
-    shopIntro: '다섯 카테고리에 걸친 모든 제품.', allOrigins: '모든 원산지', allBrands: '모든 브랜드', liveFail: '지금은 스토어에 연결할 수 없어 샘플 제품을 보여 드립니다. 잠시 후 다시 시도해 주세요.',
+    shopIntro: '다섯 카테고리에 걸친 모든 제품.', allOrigins: '모든 원산지', allBrands: '모든 브랜드', liveFail: '지금은 스토어에 연결할 수 없습니다. 잠시 후 새로고침해 주세요.', storiesFail: '지금은 이야기를 불러올 수 없습니다. 잠시 후 새로고침해 주세요.',
     search: '검색', searchPh: '제품, 메이커, 카테고리 검색', noResults: '결과가 없습니다. 카테고리나 메이커 이름으로 검색해 보세요.', brand: '브랜드', demoNote: '샘플 제품으로, 아직 구매할 수 없습니다.', toCheckout: '보안 결제 페이지로 이동 중\u2026',
     empty: '장바구니가 비어 있습니다.', subtotal: '소계', gst: '싱가포르 GST 9% 포함', checkout: 'PayNow / 카드 결제',
     pr: [['37.56N', '서울', '직접 방문해 고릅니다. 스무 곳 중 한 곳 미만만 입점합니다.'], ['4,630 KM', '바다 위', '배치 기록과 콜드체인 데이터가 함께 이동합니다.'], ['1.35N', '싱가포르', '카테고리별 규정 준수를 마친 뒤 등록됩니다.']] },
@@ -563,7 +479,3 @@ Object.assign(T.ko, {
   },
 });
 
-// Kept so journal stories can still draw their illustration after live
-// products replace PRODUCTS.
-PRODUCTS.forEach((p, i) => { p.arrival = i; p.inStock = true; p.featured = !!p.vol; });
-const MOCK_PRODUCTS = PRODUCTS.slice();

@@ -14,10 +14,10 @@ const state = {
 function loadCart() { try { return JSON.parse(localStorage.getItem('hm-cart')) || {}; } catch (e) { return {}; } }
 function saveCart() { try { localStorage.setItem('hm-cart', JSON.stringify(state.cart)); } catch (e) {} }
 const findProduct = (id) => PRODUCTS.find((p) => p.id === id);
-const artFor = (id) => findProduct(id) || MOCK_PRODUCTS.find((p) => p.id === id);
+const catCount = (c) => (state.loading ? '' : String(PRODUCTS.filter((p) => p.cat === c).length).padStart(2, '0') + ' →');
 // Image for a journal story: its WordPress featured image if it has one,
 // otherwise the linked product's picture or drawn illustration.
-const postLook = (j) => (j.image ? { photo: j.image, name: j.title.en, bg: j.bg || '#E2E1DD' } : (j.product && artFor(j.product)) || j);
+const postLook = (j) => (j.image ? { photo: j.image, name: j.title.en, bg: '#E2E1DD' } : (j.product && findProduct(j.product)) || { bg: '#E2E1DD' });
 // Volume shows curated picks; with a live store that has none tagged
 // "volume" yet, fall back to the newest six so the section is never empty.
 const volumePicks = () => {
@@ -155,38 +155,9 @@ function searchHtml(t) {
   </div>`;
 }
 
-function shapeSvg(p, label = true) {
-  const L = (y, size, sp) => label ? `<text x="150" y="${y}" text-anchor="middle" font-family="IBM Plex Sans KR" font-weight="600" font-size="${size}" letter-spacing="${sp}" fill="#0B0B0C">HAEMUN</text>` : '';
-  const shape = p.shape;
-  let inner = '';
-  if (shape === 'jar') inner = `<rect x="96" y="210" width="108" height="88" fill="url(#hmPorc)"></rect><rect x="100" y="190" width="100" height="22" fill="url(#hmCap)"></rect>${L(258,7,3)}`;
-  else if (shape === 'dropper') inner = `<rect x="124" y="188" width="52" height="110" fill="${p.fill}"></rect><rect x="124" y="188" width="52" height="110" fill="url(#hmSheen)"></rect><rect x="132" y="168" width="36" height="22" fill="url(#hmCap)"></rect><path d="M140 168 V136 a10 10 0 0 1 20 0 V168 z" fill="url(#hmCap)"></path><rect x="130" y="228" width="40" height="34" fill="#F7F6F2"></rect>${L(248,5,2)}`;
-  else if (shape === 'bottle') inner = `<path d="M116 178 Q116 166 130 164 L170 164 Q184 166 184 178 L184 298 L116 298 Z" fill="${p.fill}"></path><path d="M116 178 Q116 166 130 164 L170 164 Q184 166 184 178 L184 298 L116 298 Z" fill="url(#hmSheen)"></path><rect x="138" y="136" width="24" height="30" fill="url(#hmCap)"></rect><rect x="126" y="220" width="48" height="40" fill="#F7F6F2"></rect>${L(243,5,2)}`;
-  else if (shape === 'box') inner = `<rect x="108" y="140" width="84" height="158" fill="url(#hmPorc)"></rect><rect x="108" y="140" width="84" height="6" fill="${p.fill}"></rect>${L(214,7,3)}`;
-  else if (shape === 'tee') inner = `<rect x="84" y="214" width="132" height="84" fill="${p.fill}"></rect><rect x="84" y="214" width="132" height="84" fill="url(#hmSheen)" opacity=".5"></rect><path d="M130 214 L150 236 L170 214 Z" fill="#0B0B0C" fill-opacity=".25"></path><line x1="84" y1="256" x2="216" y2="256" stroke="#0B0B0C" stroke-opacity=".18"></line><rect x="84" y="200" width="132" height="14" fill="${p.fill}"></rect><rect x="84" y="200" width="132" height="14" fill="#FFFFFF" fill-opacity=".12"></rect>`;
-  else if (shape === 'bag') inner = `<path d="M122 176 C 122 140, 178 140, 178 176" fill="none" stroke="#0B0B0C" stroke-width="5"></path><rect x="94" y="172" width="112" height="126" fill="${p.fill}"></rect><rect x="94" y="172" width="112" height="126" fill="url(#hmSheen)"></rect><rect x="138" y="224" width="24" height="16" fill="url(#hmPorc)"></rect>`;
-  else if (shape === 'bowl') inner = `<path d="M86 244 L214 244 L198 298 L102 298 Z" fill="${p.fill}"></path><path d="M86 244 L214 244 L198 298 L102 298 Z" fill="url(#hmSheen)"></path><ellipse cx="150" cy="244" rx="64" ry="9" fill="#FFFFFF" fill-opacity=".35"></ellipse>`;
-  else if (shape === 'pouch') inner = `<path d="M104 162 L196 162 L200 290 Q 150 304 100 290 Z" fill="${p.fill}"></path><path d="M104 162 L196 162 L200 290 Q 150 304 100 290 Z" fill="url(#hmSheen)"></path><rect x="104" y="162" width="92" height="10" fill="#0B0B0C" fill-opacity=".3"></rect><rect x="122" y="204" width="56" height="50" fill="#F7F6F2"></rect>${L(232,6,2)}`;
-  else if (shape === 'card') inner = `<rect x="78" y="128" width="144" height="170" fill="url(#hmPorc)"></rect><rect x="78" y="128" width="144" height="36" fill="${p.fill}"></rect><text x="92" y="151" font-family="IBM Plex Mono" font-size="7" letter-spacing="2" fill="#FFFFFF">PASSAGE</text><text x="92" y="196" font-family="IBM Plex Mono" font-size="6" letter-spacing="1.5" fill="#5E5E5B">SIN → ICN</text><line x1="92" y1="210" x2="208" y2="210" stroke="#0B0B0C" stroke-opacity=".2" stroke-dasharray="3 3"></line><text x="92" y="232" font-family="IBM Plex Sans KR" font-weight="600" font-size="9" fill="#0B0B0C">HAEMUN</text><rect x="186" y="256" width="22" height="22" fill="#C1272D"></rect>`;
-  return `<svg viewBox="0 0 300 400" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="overflow:visible">
-    <rect x="-900" y="-400" width="2100" height="1200" fill="url(#hmLight)"></rect><rect x="-900" y="292" width="2100" height="700" fill="url(#hmFloor)"></rect><ellipse cx="150" cy="299" rx="82" ry="9" fill="url(#hmShadow)"></ellipse>${inner}</svg>`;
-}
-
-// Real uploaded photo wins over the drawn placeholder illustration.
 function mediaHtml(p, label = true) {
   if (p.photo) return `<img src="${esc(p.photo)}" alt="${esc(p.name || '')}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block">`;
-  return shapeSvg(p, label);
-}
-
-function svgDefs() {
-  return `<svg width="0" height="0" aria-hidden="true" style="position:absolute"><defs>
-  <radialGradient id="hmLight" cx="50%" cy="30%" r="70%"><stop offset="0" stop-color="#FFFFFF" stop-opacity=".55"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></radialGradient>
-  <linearGradient id="hmFloor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0B0B0C" stop-opacity=".08"/><stop offset="1" stop-color="#0B0B0C" stop-opacity="0"/></linearGradient>
-  <linearGradient id="hmPorc" x1="0" x2="1"><stop offset="0" stop-color="#D9D8D2"/><stop offset=".38" stop-color="#FBFAF7"/><stop offset=".7" stop-color="#EEEDE8"/><stop offset="1" stop-color="#C8C7C1"/></linearGradient>
-  <linearGradient id="hmCap" x1="0" x2="1"><stop offset="0" stop-color="#050506"/><stop offset=".4" stop-color="#3A3A3D"/><stop offset=".62" stop-color="#18181A"/><stop offset="1" stop-color="#000000"/></linearGradient>
-  <linearGradient id="hmSheen" x1="0" x2="1"><stop offset="0" stop-color="#000000" stop-opacity=".28"/><stop offset=".32" stop-color="#FFFFFF" stop-opacity=".22"/><stop offset=".48" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="1" stop-color="#000000" stop-opacity=".32"/></linearGradient>
-  <radialGradient id="hmShadow"><stop offset="0" stop-color="#0B0B0C" stop-opacity=".3"/><stop offset="1" stop-color="#0B0B0C" stop-opacity="0"/></radialGradient>
-  </defs></svg>`;
+  return '';
 }
 
 function viewOf(p, t) {
@@ -352,8 +323,8 @@ function volHeroHtml(t, vol) {
       <h1 class="vh-h1">${esc(t.heroH)}</h1>
       <p class="vh-dek">${esc(t.heroDek)}</p>
       <button class="vh-cta" data-action="nav" data-view="drop">${t.volCta(VOLUME.no)} <span aria-hidden="true">→</span></button>
-      ${chips ? `<div class="vh-ask"><div class="cap vh-q">${t.curiousQ}</div><div class="vh-chips">${chips}</div></div>` : ''}
-      <div class="vh-links"><button class="vh-link dim cap" data-action="goCat" data-cat="all">${t.shopEverything(PRODUCTS.length)}</button></div>
+      ${chips && !state.loading ? `<div class="vh-ask"><div class="cap vh-q">${t.curiousQ}</div><div class="vh-chips">${chips}</div></div>` : ''}
+      <div class="vh-links"><button class="vh-link dim cap" data-action="goCat" data-cat="all">${state.loading ? t.shopAll : t.shopEverything(PRODUCTS.length)}</button></div>
     </div>
   </section>`;
 }
@@ -447,14 +418,14 @@ window.addEventListener('scroll', syncProgress, { passive: true });
 function catTilesHtml(t) {
   return CATS.map((c) => `<button class="cat-tile" data-action="goCat" data-cat="${c}">
       <span class="cat-img"><img src="${CAT_IMAGES[c]}" alt="" loading="lazy" decoding="async"></span>
-      <span class="cat-row"><span class="cat-name">${dotHtml(CAT_COLOR[c])}${t.cats[c]}</span><span class="mono small muted">${String(PRODUCTS.filter((p) => p.cat === c).length).padStart(2, '0')} →</span></span>
+      <span class="cat-row"><span class="cat-name">${dotHtml(CAT_COLOR[c])}${t.cats[c]}</span><span class="mono small muted">${catCount(c)}</span></span>
       <span class="cat-desc">${t.catDesc[c]}</span>
     </button>`).join('');
 }
 
 function homeStoryHtml(t) {
   const post = POSTS[0];
-  if (!post) return '';
+  if (!post) return state.loading ? `<div class="home-story"><div class="hs-img skel-img"></div><div class="hs-text"><div class="skel-line"></div><div class="skel-line short"></div></div></div>` : (POSTS_STATUS === 'failed' ? `<p class="live-note">${t.storiesFail}</p>` : '');
   const look = postLook(post);
   return `<div class="home-story">
     <button class="hs-img" style="background:${look.bg}" data-action="openArticle" data-id="${post.id}">${mediaHtml(look, false)}</button>
@@ -628,7 +599,7 @@ function mallHtml(t) {
   const intro = state.cat === 'all' ? t.shopIntro : t.catDesc[state.cat];
   const tabs = ['all'].concat(CATS).map((c) => {
     const n = PRODUCTS.filter((p) => c === 'all' || p.cat === c).length;
-    return `<button class="shop-tab${state.cat === c ? ' on' : ''}" data-action="setCat" data-cat="${c}" aria-pressed="${state.cat === c}">${c === 'all' ? '' : dotHtml(CAT_COLOR[c])}<span>${c === 'all' ? t.all : t.cats[c]}</span><span class="shop-tab-n">${n}</span></button>`;
+    return `<button class="shop-tab${state.cat === c ? ' on' : ''}" data-action="setCat" data-cat="${c}" aria-pressed="${state.cat === c}">${c === 'all' ? '' : dotHtml(CAT_COLOR[c])}<span>${c === 'all' ? t.all : t.cats[c]}</span><span class="shop-tab-n">${state.loading ? '' : n}</span></button>`;
   }).join('');
   const sortSel = `<label class="shop-sel"><span class="sr-only">${t.sort}</span><select data-change="sort">${[['new', t.sNew], ['low', t.sLow], ['high', t.sHigh], ['name', t.sName]].map(([id, label]) => `<option value="${id}"${state.sort === id ? ' selected' : ''}>${label}</option>`).join('')}</select></label>`;
   const medNote = state.cat === 'medical' ? `<div class="med-note"><span>${t.medNote}</span><span class="cap" style="color:#2E6B5E">${t.medTag}</span></div>` : '';
@@ -734,11 +705,11 @@ function journalHtml(t) {
   const more = rest.length ? `<section class="ed-more">${rest.map((j) => edCard(t, j, 'std')).join('')}</section>` : '';
   return `
   <section class="ed-mast">
-    <div class="ed-run cap"><span>Haemun ${t.journal}</span><span>${season} · ${t.volume}</span><span>${t.edStories(POSTS.length)}</span></div>
+    <div class="ed-run cap"><span>Haemun ${t.journal}</span><span>${season} · ${t.volume}</span><span>${state.loading ? '' : t.edStories(POSTS.length)}</span></div>
     <h1 class="sr-only">${t.journal}</h1>
     <div class="ed-under"><p class="ed-tag">${t.jIntro}</p><nav class="ed-secs" aria-label="${t.category}">${sections}</nav></div>
   </section>
-  ${posts.length ? coverHtml + contents + spread + more : `<p class="ed-empty">${t.none}</p>`}`;
+  ${posts.length ? coverHtml + contents + spread + more : state.loading ? `<div class="ed-cover ed-cover-skel skel-img"></div>` : `<p class="ed-empty">${POSTS_STATUS === 'failed' ? t.storiesFail : t.none}</p>`}`;
 }
 
 function articleHtml(t, post) {
@@ -790,7 +761,7 @@ function aboutHtml(t) {
   const carry = CATS.map((c) => `<button class="ab-cat" data-action="goCat" data-cat="${c}">
       <span class="ab-cat-img"><img src="${CAT_IMAGES[c]}" alt="" loading="lazy"></span>
       <span class="ab-cat-t"><span class="cat-name">${dotHtml(CAT_COLOR[c])}${t.cats[c]}</span><span class="cat-desc">${t.catDesc[c]}</span></span>
-      <span class="mono small muted">${String(PRODUCTS.filter((p) => p.cat === c).length).padStart(2, '0')} →</span>
+      <span class="mono small muted">${catCount(c)}</span>
     </button>`).join('');
   const facts = t.facts.map(([k, v]) => `<div class="fact"><span class="cap muted">${k}</span><span>${v}</span></div>`).join('');
   return `
@@ -1034,7 +1005,6 @@ function render() {
   const prevVideo = document.querySelector('.vh-media');
   const videoAt = prevVideo && prevVideo.tagName === 'VIDEO' ? prevVideo.currentTime : 0;
   document.getElementById('app').innerHTML = `
-    ${svgDefs()}
     ${header(t)}
     ${body}
     ${routeAndFooter(t)}
