@@ -100,6 +100,54 @@ async function loadProducts() {
   }
 }
 
+// Journal stories come from WordPress posts, the same way products come from
+// WooCommerce. A post's featured image becomes the story image, its category
+// slug (beauty, fashion, wellness, pet, medical, house) drives the filter, and
+// a tag named "product-<WooCommerce id>" links the story to a product. The
+// hardcoded POSTS below are the fallback if WordPress has no posts or can't
+// be reached.
+const WP_API = WP_SITE + '/wp-json/wp/v2';
+const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+function mapWpPost(p) {
+  const terms = ((p._embedded && p._embedded['wp:term']) || []).flat();
+  const catSlug = (terms.find((tm) => tm.taxonomy === 'category' && (CATS.includes(tm.slug) || tm.slug === 'house')) || {}).slug || 'house';
+  const prodTag = terms.find((tm) => tm.taxonomy === 'post_tag' && /^product-\d+$/.test(tm.slug));
+  const media = p._embedded && p._embedded['wp:featuredmedia'] && p._embedded['wp:featuredmedia'][0];
+  const image = (media && media.source_url) || null;
+  const paras = htmlToBlocks(p.content && p.content.rendered);
+  const words = paras.join(' ').split(/\s+/).filter(Boolean).length;
+  const dt = new Date(p.date);
+  const title = stripTags(p.title && p.title.rendered);
+  const dek = stripTags(p.excerpt && p.excerpt.rendered);
+  return {
+    id: 'wp' + p.id,
+    cat: catSlug,
+    product: prodTag ? 'wc' + prodTag.slug.replace('product-', '') : null,
+    image,
+    bg: '#E2E1DD', shape: 'card', fill: CAT_COLOR[catSlug] || '#C1272D', // fallback illustration
+    date: String(dt.getDate()).padStart(2, '0') + ' ' + MONTHS[dt.getMonth()] + ' ' + dt.getFullYear(),
+    read: Math.max(1, Math.round(words / 200)) + ' MIN',
+    author: 'Haemun Editors',
+    title: { en: title, ko: title },
+    dek: { en: dek, ko: dek },
+    paras,
+  };
+}
+
+async function loadPosts() {
+  try {
+    const res = await fetch(`${WP_API}/posts?_embed=wp:featuredmedia,wp:term&per_page=20`);
+    if (!res.ok) throw new Error('WordPress posts request failed: ' + res.status);
+    const items = await res.json();
+    if (!Array.isArray(items) || !items.length) return; // keep hardcoded fallback
+    POSTS.length = 0;
+    POSTS.push(...items.map(mapWpPost));
+  } catch (err) {
+    console.error('Haemun: could not load WordPress posts (' + err.message + '). Showing sample stories.');
+  }
+}
+
 let PRODUCTS = [
   { id: 'p1', vol: true, cat: 'beauty', shape: 'jar', bg: '#DEDEDA', fill: '#0B0B0C', price: 54, name: 'Chungdam Cellular Barrier Cream', ko: '청담 셀룰러 배리어 크림', origin: 'Seoul, Gangnam', moq: 48,
     teaser: 'Ceramide and peptide balm, developed with Cheongdam dermatology clinics.',

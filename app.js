@@ -15,6 +15,9 @@ function loadCart() { try { return JSON.parse(localStorage.getItem('hm-cart')) |
 function saveCart() { try { localStorage.setItem('hm-cart', JSON.stringify(state.cart)); } catch (e) {} }
 const findProduct = (id) => PRODUCTS.find((p) => p.id === id);
 const artFor = (id) => findProduct(id) || MOCK_PRODUCTS.find((p) => p.id === id);
+// Image for a journal story: its WordPress featured image if it has one,
+// otherwise the linked product's picture or drawn illustration.
+const postLook = (j) => (j.image ? { photo: j.image, name: j.title.en, bg: j.bg || '#E2E1DD' } : (j.product && artFor(j.product)) || j);
 // Volume shows curated picks; with a live store that has none tagged
 // "volume" yet, fall back to the newest six so the section is never empty.
 const volumePicks = () => { const v = PRODUCTS.filter((p) => p.vol); return v.length ? v : PRODUCTS.slice(0, 6); };
@@ -221,7 +224,7 @@ function sechead(n, title, sub, btnAction, btnLabel) {
 }
 
 function postCard(j, t, h, big = false) {
-  const look = (j.product && artFor(j.product)) || j;
+  const look = postLook(j);
   return `<button class="post-card" data-action="openArticle" data-id="${j.id}">
     <span class="post-img" style="aspect-ratio:4 / 3;background:${look.bg}">${mediaHtml(look, false)}</span>
     <span class="cap post-meta"><span class="flex-c">${dotHtml(CAT_COLOR[j.cat] || '#C1272D')}${t.cats[j.cat]}</span><span>${j.date}</span><span>${j.read}</span></span>
@@ -412,7 +415,7 @@ function journalHtml(t) {
   const rest = jposts.slice(1);
   const featuredHtml = featured ? `
   <section class="featured">
-    <button class="feat-img" style="background:${(artFor(featured.product) || featured).bg}" data-action="openArticle" data-id="${featured.id}">${mediaHtml(artFor(featured.product) || featured, false)}</button>
+    <button class="feat-img" style="background:${postLook(featured).bg}" data-action="openArticle" data-id="${featured.id}">${mediaHtml(postLook(featured), false)}</button>
     <div class="feat-text">
       <div class="cap flex-c" style="gap:14px;color:#7A7A78"><span style="color:#C1272D">${t.featuredLabel}</span><span>${t.cats[featured.cat]}</span><span>${featured.date}</span></div>
       <div class="feat-title">${esc(featured.title[state.lang])}</div>
@@ -436,7 +439,7 @@ function journalHtml(t) {
 
 function articleHtml(t, post) {
   const pr = post.product ? findProduct(post.product) : null;
-  const art = (post.product && artFor(post.product)) || post;
+  const art = postLook(post);
   const productBlock = pr ? `
   <div class="art-product-wrap">
     <div class="art-product">
@@ -704,4 +707,4 @@ document.addEventListener('click', (e) => {
 
 Object.assign(state, fromHash());
 render();
-loadProducts().finally(() => setState({ loading: false }));
+Promise.allSettled([loadProducts(), loadPosts()]).finally(() => setState({ loading: false }));
