@@ -481,20 +481,18 @@ function dropHtml(t) {
   const h = VOLUME.hero;
   const season = VOLUME.season[state.lang] || VOLUME.season.en;
   return `
-  <section class="sec-tight">
+  <section class="sec-tight drop-top">
     <div class="cap muted">HAEMUN / ${t.volume}</div>
     <div class="drop-head">
       <div>
         <div class="cap vh-kicker drop-kicker">${t.heroKicker(VOLUME.no, season)}<span class="stamp">${t.openNow}</span></div>
         <h1 class="drop-h1">${t.volume}</h1>
       </div>
-      <div class="drop-intro">
-        <p>${esc(t.volIntro)}</p>
-        <div class="drop-links"><button class="link-btn" data-action="scrollDrops">${t.howDrops} ↓</button><button class="link-btn" data-action="nav" data-view="drops">${t.pastDrops} →</button></div>
-      </div>
+      <div class="drop-links"><button class="link-btn" data-action="scrollDrops">${t.howDrops} ↓</button><button class="link-btn" data-action="nav" data-view="drops">${t.pastDrops} →</button></div>
     </div>
   </section>
   <div class="drop-cover"><picture><source media="(max-width: 760px)" srcset="${h.tall}"><img src="${h.wide}" alt="${esc(t.heroAlt)}"></picture></div>
+  ${themeHtml(t, vol)}
 
   <section class="sec sec-vol">
     ${sechead('01', t.volTitle, t.volSub, 'goCat', t.shopAll)}
@@ -504,6 +502,25 @@ function dropHtml(t) {
   <section class="sec" id="drops">
     ${sechead('02', t.dropsH, t.dropsSub, 'nav-drops', t.pastDrops)}
     ${dropsHtml(t)}
+  </section>`;
+}
+
+// The volume's theme: what it is about, and why each piece is in it.
+function themeHtml(t, vol) {
+  const th = VOLUME.theme;
+  if (!th) return '';
+  const pick = (o) => (o && (o[state.lang] || o.en)) || '';
+  const rows = vol.filter((p) => th.why[p.id]).map((p, i) => `
+      <li><span class="cap muted">${String(i + 1).padStart(2, '0')}</span><div><button class="dt-name" data-action="openProduct" data-id="${p.id}">${esc(p.name)}</button><p>${esc(pick(th.why[p.id]))}</p></div></li>`).join('');
+  return `
+  <section class="sec drop-theme">
+    <div class="dt-lead">
+      <div class="cap muted">${t.themeCap}</div>
+      <h2 class="dt-title">${esc(pick(th.title))}</h2>
+      ${(th.paras[state.lang] || th.paras.en).map((x) => `<p>${esc(x)}</p>`).join('')}
+      <p class="muted">${esc(t.volIntro)}</p>
+    </div>
+    ${rows ? `<div class="dt-why"><div class="cap muted">${t.themeWhy}</div><ol>${rows}</ol></div>` : ''}
   </section>`;
 }
 

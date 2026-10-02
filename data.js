@@ -64,6 +64,29 @@ const VOLUME = {
     tall: 'assets/volumes/vol-01-hero-tall.jpg',
     video: null, videoTall: null, film: null, filmLength: '',
   },
+  // The volume's theme, shown under the cover on the volume page: a title,
+  // a few short paragraphs, and one line per product (by id) on why it fits.
+  theme: {
+    title: { en: 'The turn of the season', ko: '환절기' },
+    paras: {
+      en: [
+        'Koreans have a word for the weeks when summer gives way to cold: hwanjeolgi, the turn of the season. Skin tightens, joints notice the mornings, and families reach for the things that restore, from a box of red ginseng to a richer oil at night.',
+        'Volume 01 is built around that habit. Every piece answers the same question: what helps you, and the ones you look after, come through the change in better shape than you went in?',
+      ],
+      ko: [
+        '여름이 추위로 넘어가는 몇 주를 우리는 환절기라고 부릅니다. 피부가 당기고, 아침 공기가 몸에 먼저 닿고, 가족들은 홍삼 한 상자나 밤에 바르는 진한 오일처럼 몸을 되살리는 것을 찾습니다.',
+        '제1호는 그 습관에서 출발했습니다. 모든 제품이 같은 질문에 답합니다. 나와 내가 돌보는 이들이 계절이 바뀐 뒤 더 좋은 상태로 지나가려면 무엇이 필요할까?',
+      ],
+    },
+    why: {
+      wc32: { en: 'Ginseng and peony, the classic pairing for skin that has lost its summer bounce.', ko: '여름의 탄력을 잃은 피부를 위한 인삼과 작약의 고전적인 조합.' },
+      wc34: { en: 'Camellia was the oil Korean households used against the first dry winds. This is that oil, refined.', ko: '첫 건조한 바람에 한국 가정이 쓰던 동백 오일을 다듬은 것.' },
+      wc44: { en: 'Six-year red ginseng is what Korean families give each other when the weather turns.', ko: '날씨가 바뀔 때 한국 가족들이 서로 건네는 6년근 홍삼.' },
+      wc42: { en: 'Vegetable-tanned leather darkens and softens with every season. A bag made for the long run.', ko: '계절이 지날수록 짙고 부드러워지는 베지터블 가죽. 오래 함께할 가방.' },
+      wc54: { en: 'Cold pavements crack paws too. Herbs and beeswax, the same restoring idea, for the dog.', ko: '차가운 길은 발바닥도 갈라지게 합니다. 같은 회복의 생각을 반려견에게.' },
+      wc56: { en: 'The full reset: a few days in Seoul for skin, timed for when the season changes.', ko: '계절이 바뀔 때 맞춘, 서울에서 며칠간의 피부 리셋.' },
+    },
+  },
   starts: {
     wc34: { en: 'Start here if you want a ritual, not a routine.', ko: '루틴이 아닌 의식을 원한다면 여기서 시작하세요.' },
   },
@@ -375,7 +398,7 @@ Object.assign(T.en, {
   pastDrops: 'Past drops', pastIntro: 'Every volume stays on record here after it closes.',
   pastNote: 'Volume 01 is our first. When Volume 02 opens, Volume 01 moves here, and its pieces stay in the shop while stock lasts.',
   openNow: 'Open now', viewVolume: 'View volume', comingOn: (date) => `Opens ${date}`, volumeN: (vol) => `Volume ${vol}`,
-  volTitle: 'Six ways in', volSub: 'One piece from each category, chosen in person. Pick the one that sounds like you.',
+  themeCap: 'The theme', themeWhy: 'Why these six', volTitle: 'Six ways in', volSub: 'One piece from each category, chosen in person. Pick the one that sounds like you.',
   heroKicker: (vol, season) => `Volume ${vol} · ${season}`, now: 'Now',
   heroH: 'Start\nwith six.',
   heroDek: 'New to Korean makers? We went to Korea and chose one piece from each thing it does best. This is where to begin.',
@@ -461,7 +484,7 @@ Object.assign(T.ko, {
   pastDrops: '지난 드롭', pastIntro: '마감된 호는 모두 이곳에 기록으로 남습니다.',
   pastNote: '제1호는 저희의 첫 호입니다. 제2호가 공개되면 제1호는 이곳으로 옮겨지고, 제품은 재고가 남아 있는 동안 숍에서 계속 판매됩니다.',
   openNow: '지금 공개', viewVolume: '호 보기', comingOn: (date) => `${date} 공개`, volumeN: (vol) => `제${Number(vol)}호`,
-  volTitle: '여섯 가지 입문', volSub: '카테고리마다 하나씩, 직접 고른 제품입니다. 마음에 드는 것부터 시작하세요.',
+  themeCap: '테마', themeWhy: '이 여섯 가지를 고른 이유', volTitle: '여섯 가지 입문', volSub: '카테고리마다 하나씩, 직접 고른 제품입니다. 마음에 드는 것부터 시작하세요.',
   heroKicker: (vol, season) => `제${Number(vol)}호 · ${season}`, now: '공개 중',
   heroH: '여섯 가지로\n시작하기.',
   heroDek: '한국 메이커가 처음이신가요? 저희가 직접 한국을 찾아, 한국이 가장 잘하는 분야마다 하나씩 골랐습니다. 여기서 시작하세요.',
