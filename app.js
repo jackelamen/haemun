@@ -37,6 +37,7 @@ function pageHash() {
   if (state.view === 'about') return '#/about';
   if (state.view === 'drop') return '#/volume/' + VOLUME.no;
   if (state.view === 'drops') return '#/volumes';
+  if (state.view === 'brands') return '#/brands';
   return '#/';
 }
 function fromHash() {
@@ -49,6 +50,7 @@ function fromHash() {
   if (a === 'about') return { view: 'about', ...product };
   if (a === 'volume') return { view: 'drop', ...product };
   if (a === 'volumes') return { view: 'drops', ...product };
+  if (a === 'brands') return { view: 'brands', ...product };
   return { view: 'home', ...product };
 }
 let productPushed = false;
@@ -256,7 +258,7 @@ function header(t) {
   <div class="cap annbar"><span>${t.ann1}</span><span class="sep">·</span><span>${t.ann2}</span></div>
   <header class="site-header${filmHeader() ? ' on-film' : ''}">
     <nav class="hnav">
-      ${nav('drop', t.volume)}${nav('mall', t.shopAll)}${nav('journal', t.journal)}${nav('about', t.about)}
+      ${nav('drop', t.volume)}${nav('mall', t.shopAll)}${nav('brands', t.brands)}${nav('journal', t.journal)}${nav('about', t.about)}
     </nav>
     <button class="logo" data-action="nav" data-view="home">
       <img class="logo-mark on-light" src="assets/haemun-mark.png" alt="" width="40" height="40"><img class="logo-word on-light" src="assets/haemun-wordmark.png" alt="Haemun" width="92" height="17"><img class="logo-mark on-dark" src="assets/haemun-mark-white.png" alt="" width="40" height="40"><img class="logo-word on-dark" src="assets/haemun-wordmark-white.png" alt="" width="92" height="17">
@@ -297,17 +299,41 @@ function nextDropInfo(now = new Date()) {
   return { vol: String(vol).padStart(2, '0'), next, days };
 }
 function dropsHtml(t) {
-  const d = nextDropInfo();
+  const si = seasonInfo();
   const notes = POSTS.find((j) => j.cat === 'house');
-  const date = d.next.toLocaleDateString(state.lang === 'ko' ? 'ko-KR' : 'en-SG', { day: 'numeric', month: 'long' });
-  const label = DROP_MONTHS.length === 12 ? '' : t.seasons[d.next.getMonth()];
-  return `<div class="drops">
-    <div class="drops-head">
-      <div class="cap muted">${t.dropsKicker}</div>
-      <div class="drops-next"><span class="drops-dot"></span>${t.nextDrop(d.vol, label, date)} <span class="muted">· ${t.daysLeft(d.days)}</span></div>
+  const loc = state.lang === 'ko' ? 'ko-KR' : 'en-SG';
+  // Twelve months from the current volume's opening month.
+  const months = Array.from({ length: 12 }, (_, i) => new Date(si.open.getFullYear(), si.open.getMonth() + i, 1));
+  let n = Number(si.curVol) - 1;
+  const cells = months.map((m) => {
+    const drop = DROP_MONTHS.includes(m.getMonth());
+    if (drop) n++;
+    const status = !drop ? '' : m.getTime() === si.open.getTime() ? 'open' : m.getTime() === si.next.getTime() ? 'next' : 'later';
+    const label = { open: t.dwOpen, next: t.dwNext, later: t.dwLater }[status];
+    return `<div class="dc${drop ? ' dc-drop dc-' + status : ''}">
+      <span class="dc-m mono small">${m.toLocaleDateString(loc, { month: 'short' })}${m.getMonth() === 0 || m === months[0] ? ' ' + m.getFullYear() : ''}</span>
+      ${drop ? `<span class="dc-card"><span class="dc-vol">${t.volumeN(String(n).padStart(2, '0'))}</span><span class="dc-season">${DROP_MONTHS.length === 12 ? '' : t.seasons[m.getMonth()]}</span><span class="dc-status cap">${status === 'open' ? '<span class="vh-live"></span>' : ''}${label}</span></span>` : ''}
+    </div>`;
+  }).join('');
+  const span = months[11].getTime() + 31 * 86400000 - months[0].getTime();
+  const todayPct = (((Date.now() - months[0].getTime()) / span) * 100).toFixed(2);
+  const dates = DROP_MONTHS.map((m) => new Date(2026, m, 1).toLocaleDateString(loc, { day: 'numeric', month: 'long' }));
+  const dateList = state.lang === 'ko' ? dates.join(', ') : dates.slice(0, -1).join(', ') + ' and ' + dates[dates.length - 1];
+  return `<div class="dw">
+    <p class="dw-lead">${esc(t.dwLead)}</p>
+    <div class="dw-block">
+      <div class="cap dw-h">${t.dwCal}</div>
+      <div class="dcal"><div class="dcal-row">${cells}</div><span class="dcal-today" style="left:${todayPct}%"><span class="cap">${t.dwTodayMark}</span></span></div>
     </div>
-    <ol class="drops-steps">${t.drops.map(([n, h, b]) => `<li><span class="mono small drops-n">${n}</span><div class="drops-h">${h}</div><p>${b}</p></li>`).join('')}</ol>
-    ${notes ? `<button class="link-btn small" data-action="openArticle" data-id="${notes.id}">${t.dropNotes} →</button>` : ''}
+    <div class="dw-block">
+      <div class="cap dw-h">${t.dwLife}</div>
+      <ol class="dlife">${t.dwSteps.map(([h, b], i) => `<li><span class="dl-n mono small">${String(i + 1).padStart(2, '0')}</span><span class="dl-h">${h}</span><p>${b}</p></li>`).join('')}</ol>
+    </div>
+    <div class="dw-block">
+      <div class="cap dw-h">${t.dwFaqH}</div>
+      <div class="dfaq">${t.dwFaq(dateList).map(([q, a]) => `<div class="dq"><div class="dq-q">${q}</div><p>${a}</p></div>`).join('')}</div>
+    </div>
+    ${notes ? `<button class="link-btn" data-action="openArticle" data-id="${notes.id}">${t.dropNotes} →</button>` : ''}
   </div>`;
 }
 function skeletons(n, ratio) { return Array.from({ length: n }, () => `<div class="skel"><div class="skel-img" style="aspect-ratio:${ratio}"></div><div class="skel-line"></div><div class="skel-line short"></div></div>`).join(''); }
@@ -354,81 +380,67 @@ function volCard(p, t, i, n) {
   </article>`;
 }
 
-// The crossing: the real route from Seoul to Singapore, drawn on a quiet
-// nautical grid. Stops reuse the brand's route copy (T.pr). The red marker is
-// the season clock: how far we are towards the next volume.
-const XING_ROUTE = [[126.5, 37.45], [125.2, 35.6], [124.4, 33.2], [123.2, 30], [121.4, 26.6], [119.4, 23.4], [116.6, 19.8], [113, 14.6], [109.8, 9.6], [106.6, 5.2], [104.2, 1.5]];
-const xy = ([lon, lat]) => [60 + (lon - 100) * 36, 440 - lat * 10];
-function splinePath(pts) {
-  const p = pts.map(xy);
-  let d = `M${p[0][0].toFixed(1)} ${p[0][1].toFixed(1)}`;
-  for (let i = 0; i < p.length - 1; i++) {
-    const a = p[i - 1] || p[i], b = p[i], c = p[i + 1], e = p[i + 2] || c;
-    const c1 = [b[0] + (c[0] - a[0]) / 6, b[1] + (c[1] - a[1]) / 6], c2 = [c[0] - (e[0] - b[0]) / 6, c[1] - (e[1] - b[1]) / 6];
-    d += ` C${c1[0].toFixed(1)} ${c1[1].toFixed(1)} ${c2[0].toFixed(1)} ${c2[1].toFixed(1)} ${c[0].toFixed(1)} ${c[1].toFixed(1)}`;
-  }
-  return d;
-}
+// The next-volume countdown, told as a voyage: the current volume left Seoul
+// on its opening day and the next one reaches Singapore on its own. The ship
+// is today.
 function seasonInfo(now = new Date()) {
   const d = nextDropInfo(now);
   let open = new Date(d.next.getFullYear(), d.next.getMonth() - 1, 1);
   while (!DROP_MONTHS.includes(open.getMonth())) open = new Date(open.getFullYear(), open.getMonth() - 1, 1);
-  const date = d.next.toLocaleDateString(state.lang === 'ko' ? 'ko-KR' : 'en-SG', { day: 'numeric', month: 'long' });
-  return { ...d, date, frac: Math.min(0.97, Math.max(0.03, (now - open) / (d.next - open))) };
+  const fmt = (x) => x.toLocaleDateString(state.lang === 'ko' ? 'ko-KR' : 'en-SG', { day: 'numeric', month: 'long' });
+  const total = Math.round((d.next - open) / 86400000);
+  const day = Math.min(total, Math.max(1, Math.floor((now - open) / 86400000) + 1));
+  return { ...d, open, date: fmt(d.next), openDate: fmt(open), total, day, curVol: String(Math.max(1, Number(d.vol) - 1)).padStart(2, '0'), frac: Math.min(0.98, Math.max(0.02, (now - open) / (d.next - open))) };
 }
-function crossingHtml(t) {
+function countdownHtml(t) {
   const si = seasonInfo();
-  const [seoul, sea, sg] = t.pr;
-  const pct = (v, max) => (v / max * 100).toFixed(2) + '%';
-  const lats = [[37.5, '37.5°N'], [30, '30°N'], [20, '20°N'], [10, '10°N'], [1.35, '1.35°N']];
-  const lons = [[105, '105°E'], [115, '115°E'], [125, '125°E']];
-  const [sx, sy] = xy(XING_ROUTE[0]), [gx, gy] = xy(XING_ROUTE[XING_ROUTE.length - 1]);
-  const seas = [[t.seaNames[0], 119.6, 33.4], [t.seaNames[1], 124.6, 28.6], [t.seaNames[2], 117.2, 8.6]];
-  return `<section class="xing" aria-labelledby="xing-h">
-    <div class="xing-map">
-      <svg viewBox="0 0 1200 460" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-        ${lats.map(([l, lab]) => `<line class="xg" x1="0" x2="1200" y1="${440 - l * 10}" y2="${440 - l * 10}"/><text class="xg-t" x="1192" y="${440 - l * 10 - 6}" text-anchor="end">${lab}</text>`).join('')}
-        ${lons.map(([l, lab]) => `<line class="xg xg-v" y1="0" y2="460" x1="${60 + (l - 100) * 36}" x2="${60 + (l - 100) * 36}"/><text class="xg-t" x="${60 + (l - 100) * 36 + 6}" y="454">${lab}</text>`).join('')}
-        ${seas.map(([n, lon, lat]) => { const [x, y] = xy([lon, lat]); return `<text class="xg-sea" x="${x}" y="${y}">${n}</text>`; }).join('')}
-        <path class="xr-wake" d="${splinePath(XING_ROUTE)}"/>
-        <path class="xr" id="xr" d="${splinePath(XING_ROUTE)}"/>
-        <circle class="xr-port" cx="${sx}" cy="${sy}" r="6"/><circle class="xr-port" cx="${gx}" cy="${gy}" r="6"/>
-        <g class="xr-ship" id="xr-ship" data-frac="${si.frac.toFixed(3)}"><circle r="16" class="xr-halo"/><circle r="6.5" class="xr-dot"/></g>
-      </svg>
-      <div class="xs xs-seoul" style="right:${pct(1200 - sx + 22, 1200)};top:${pct(sy - 62, 460)}"><div class="mono small">${seoul[0]}</div><div class="xs-h">${seoul[1]}</div><p>${seoul[2]}</p></div>
-      <div class="xs xs-sea" style="left:${pct(xy([117.6, 20])[0] + 34, 1200)};top:${pct(xy([117.6, 20])[1] + 6, 460)}"><div class="mono small">${sea[0]}</div><div class="xs-h">${sea[1]}</div><p>${sea[2]}</p></div>
-      <div class="xs xs-sg" style="left:${pct(gx + 26, 1200)};top:${pct(gy - 52, 460)}"><div class="mono small">${sg[0]}</div><div class="xs-h">${sg[1]}</div><p>${sg[2]}</p></div>
+  const season = DROP_MONTHS.length === 12 ? '' : t.seasons[si.next.getMonth()];
+  const pct = (si.frac * 100).toFixed(1) + '%';
+  const weeks = Math.floor(si.total / 7);
+  const ticks = Array.from({ length: weeks - 1 }, (_, i) => `<span class="cd-tick" style="left:${(((i + 1) * 7) / si.total * 100).toFixed(2)}%"></span>`).join('');
+  return `<section class="cd" aria-label="${t.cdKicker}">
+    <div class="cd-left">
+      <div class="cap cd-k"><span class="xnext-dot"></span>${t.cdKicker}</div>
+      <div class="cd-num"><span class="cd-n">${si.days}</span><span class="cd-u">${t.cdDays(si.days)}</span></div>
+      <div class="cd-until">${t.cdUntil(si.vol, season, si.date)}</div>
     </div>
-    <div class="xing-head">
-      <div class="cap xk">${t.xingKicker}</div>
-      <h2 class="xh" id="xing-h">${esc(t.xingH)}</h2>
-      <p class="xb">${esc(t.xingB)}</p>
-      <div class="xnext"><span class="xnext-dot"></span>${t.xingNext(si.vol, si.date, si.days)}</div>
+    <div class="cd-voyage">
+      <div class="cd-ends">
+        <div><span class="mono small">37.56° N</span><span class="cd-place">${t.seoul}</span><span class="cd-note">${t.cdFrom(si.curVol, si.openDate)}</span></div>
+        <div class="cd-end-r"><span class="mono small">1.35° N</span><span class="cd-place">${t.singapore}</span><span class="cd-note">${t.cdTo(si.vol, si.date)}</span></div>
+      </div>
+      <div class="cd-line" id="cd-line" style="--at:${pct}">
+        <span class="cd-rest"></span><span class="cd-done"></span>${ticks}
+        <span class="cd-port" style="left:0"></span><span class="cd-port" style="left:100%"></span>
+        <span class="cd-ship"><span class="cd-tag cap${si.frac < 0.2 ? ' at-start' : si.frac > 0.8 ? ' at-end' : ''}">${t.cdToday(si.day, si.total)}</span></span>
+      </div>
+      <div class="cd-seas">${t.seaNames.map((n, i) => `<span style="left:${[16, 50, 84][i]}%">${n}</span>`).join('')}</div>
     </div>
-    <ol class="xs-list">${t.pr.map(([n, h, b]) => `<li><span class="mono small">${n}</span><span class="xs-h">${h}</span><span>${b}</span></li>`).join('')}</ol>
+    <button class="cd-see link-btn" data-action="nav" data-view="drop">${t.cdSee} →</button>
   </section>`;
 }
-// Places the season marker on the drawn route, and draws the route once.
-let xingDrawn = false;
-function placeXing() {
-  const path = document.getElementById('xr'), ship = document.getElementById('xr-ship');
-  if (!path || !ship || !path.getTotalLength) return;
-  const len = path.getTotalLength();
-  const at = path.getPointAtLength(len * Number(ship.dataset.frac));
-  ship.setAttribute('transform', `translate(${at.x.toFixed(1)} ${at.y.toFixed(1)})`);
-  if (xingDrawn || window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) { xingDrawn = true; return; }
-  path.style.strokeDasharray = path.style.strokeDashoffset = len;
-  ship.style.opacity = 0;
-  const io = new IntersectionObserver((es) => {
-    if (!es[0].isIntersecting) return;
-    io.disconnect(); xingDrawn = true;
-    const p = document.getElementById('xr'), sh = document.getElementById('xr-ship');
-    if (!p) return;
-    p.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], { duration: 2200, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' });
-    sh.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 500, delay: 1600, fill: 'forwards' });
-  }, { threshold: 0.35 });
-  io.observe(path.closest('.xing'));
+// The ship sails out to today's position the first time the band scrolls
+// into view; after that it simply sits there.
+let cdSailed = false, cdAt = '';
+function placeCountdown() {
+  const line = document.getElementById('cd-line');
+  if (!line) return;
+  if (cdSailed || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { cdSailed = true; return; }
+  cdAt = line.style.getPropertyValue('--at');
+  line.style.setProperty('--at', '0%');
+  checkSail();
 }
+function checkSail() {
+  if (cdSailed) return;
+  const line = document.getElementById('cd-line');
+  if (!line) return;
+  const r = line.getBoundingClientRect();
+  if (r.top > window.innerHeight * 0.85 || r.bottom < 0) return;
+  cdSailed = true;
+  line.classList.add('sail');
+  setTimeout(() => line.style.setProperty('--at', cdAt), 30);
+}
+window.addEventListener('scroll', checkSail, { passive: true });
 
 function catTilesHtml(t) {
   return CATS.map((c) => `<button class="cat-tile" data-action="goCat" data-cat="${c}">
@@ -473,7 +485,7 @@ function homeHtml(t) {
   const volProducts = volumePicks();
   return `
   ${volHeroHtml(t, volProducts)}
-  ${crossingHtml(t)}
+  ${countdownHtml(t)}
 
   <section class="sec">
     ${sechead('01', t.catH, t.catSub, 'goCat', t.enterMall)}
@@ -731,55 +743,99 @@ function articleHtml(t, post) {
 }
 
 function aboutHtml(t) {
-  const catRows = CATS.map((c, i) => {
-    const f = PRODUCTS.find((p) => p.cat === c && p.vol) || PRODUCTS.find((p) => p.cat === c);
-    return `<button class="about-row" data-action="goCat" data-cat="${c}">
-      <span class="mono small muted">0${i + 1}</span>
-      <span class="flex-c" style="font-size:28px;font-weight:300">${dotHtml(CAT_COLOR[c])}${t.cats[c]}</span>
-      <span class="about-desc">${t.catDesc[c]}</span>
-      <span class="mono small muted" style="justify-self:end">${String(PRODUCTS.filter((p) => p.cat === c).length).padStart(2, '0')} →</span>
-    </button>`;
-  }).join('');
-  const steps = t.how.map(([n, h, b]) => `<div class="step"><div class="step-n">${n}</div><div class="step-h">${h}</div><p class="step-b">${b}</p></div>`).join('');
+  const carry = CATS.map((c) => `<button class="ab-cat" data-action="goCat" data-cat="${c}">
+      <span class="ab-cat-img"><img src="${CAT_IMAGES[c]}" alt="" loading="lazy"></span>
+      <span class="ab-cat-t"><span class="cat-name">${dotHtml(CAT_COLOR[c])}${t.cats[c]}</span><span class="cat-desc">${t.catDesc[c]}</span></span>
+      <span class="mono small muted">${String(PRODUCTS.filter((p) => p.cat === c).length).padStart(2, '0')} →</span>
+    </button>`).join('');
   const facts = t.facts.map(([k, v]) => `<div class="fact"><span class="cap muted">${k}</span><span>${v}</span></div>`).join('');
   return `
-  <section class="sec-tight">
-    <div class="cap muted">HAEMUN / ${t.about}</div>
-    <div class="about-hero">
-      <div class="about-h1">${esc(t.aboutH)}</div>
-      <div class="about-lede">${esc(t.aboutLede)}</div>
+  <section class="ab-hero">
+    <img class="ab-hero-img" src="assets/about/makers.jpg" alt="">
+    <div class="ab-hero-copy">
+      <div class="cap ab-k">${t.abKicker}</div>
+      <h1 class="ab-h1">${esc(t.abH)}</h1>
+      <p class="ab-lede">${esc(t.abLede)}</p>
     </div>
   </section>
-  <section class="name-sec" aria-label="${t.nameKicker}">
-    <div class="cap muted">${t.nameKicker}</div>
-    <div class="name-grid">${t.nameDefs.map(([glyph, read, meaning, line], i) => `<div class="name-def${i === 1 ? ' is-sea' : ''}">
-      <div class="name-glyph">${glyph}</div>
-      <div class="cap name-read">${read}</div>
-      <div class="name-mean">${meaning}</div>
-      <p class="name-line">${line}</p>
-    </div>`).join('')}</div>
-    <p class="name-sum">${t.nameLine}</p>
+
+  <section class="sec ab-name">
+    <div class="ab-name-intro">
+      <div class="cap muted">${t.abNameH}</div>
+      <p>${esc(t.abNameIntro)}</p>
+    </div>
+    <div class="ab-parts">${t.abParts.map(([hangul, hanja, rom, mean, line], i) => `${i ? '<span class="ab-plus" aria-hidden="true">+</span>' : ''}<div class="ab-part">
+        <div class="ab-glyphs"><span class="ab-hangul" lang="ko">${hangul}</span><span class="ab-hanja" lang="ko">${hanja}</span></div>
+        <div class="ab-read"><span class="mono">${rom}</span><span class="ab-mean">${mean}</span></div>
+        <p>${line}</p>
+      </div>`).join('')}</div>
+    <div class="ab-sea"><span class="ab-sea-word">SEA</span><p>${esc(t.abSea)}</p></div>
+    <p class="ab-sum">${esc(t.abSum)}</p>
   </section>
-  <section class="about-story">
-    <div class="about-panel"><img class="about-mark" src="assets/haemun-mark-color.png" alt="Haemun emblem: a gate roof over the sea between two mountains" loading="lazy"><span class="cap about-cap">海 SEA · 門 GATE</span></div>
-    <div class="about-paras">${t.aboutParas.map((p) => `<p>${esc(p)}</p>`).join('')}</div>
-  </section>
+
   <section class="sec">
-    ${sechead('01', t.aCarry, t.aCarrySub)}
-    <div style="margin-top:24px">${catRows}</div>
+    ${sechead('01', t.abWhyH, '')}
+    <div class="ab-story">
+      <div class="ab-story-img"><img src="assets/about/lab.jpg" alt="" loading="lazy"></div>
+      <div class="ab-story-text">${t.aboutParas.map((p) => `<p>${esc(p)}</p>`).join('')}</div>
+    </div>
   </section>
+
   <section class="sec">
-    ${sechead('02', t.aHow, t.aHowSub)}
-    <div class="grid4" style="margin-top:40px">${steps}</div>
+    ${sechead('02', t.abHowH, t.aHowSub)}
+    <ol class="ab-how">${t.how.map(([n, h, b]) => `<li><span class="mono small muted">${n}</span><span class="ab-how-h">${h}</span><p>${b}</p></li>`).join('')}</ol>
   </section>
+
   <section class="sec">
-    ${sechead('03', t.aCo, t.aCoSub)}
-    <div class="co-grid" style="margin-top:40px">
-      <div class="facts">${facts}</div>
-      <div class="trade-box">
-        <div><div class="cap" style="color:#C1272D">${t.trade}</div><div style="margin-top:16px;font-size:28px;font-weight:300">${t.tradeH}</div><p style="margin:16px 0 0;font-size:13px;line-height:1.75;color:#4A4A48">${t.tradeB}</p></div>
-        <button class="btn-outline-dark cap" data-action="enableTrade">${t.tradeCta} →</button>
+    ${sechead('03', t.abCarryH, t.aCarrySub, 'goCat', t.enterMall)}
+    <div class="ab-cats">${carry}</div>
+  </section>
+
+  <section class="ab-join">
+    <div class="cap ab-k">${t.abJoinH}</div>
+    <div class="ab-join-grid">
+      <div><div class="ab-join-h">${t.abMakerH}</div><p>${esc(t.abMakerB)}</p><div class="ab-join-links"><button class="ab-btn" data-action="nav" data-view="brands">${t.abBrandsCta} →</button><span class="ab-write">${t.abWrite}</span></div></div>
+      <div><div class="ab-join-h">${t.abShopH}</div><p>${esc(t.abShopB)}</p><div class="ab-join-links"><button class="ab-btn" data-action="enableTrade">${t.abTradeCta} →</button></div></div>
+    </div>
+  </section>
+
+  <section class="sec">
+    ${sechead('04', t.aCo, t.aCoSub)}
+    <div class="facts ab-facts">${facts}</div>
+  </section>`;
+}
+
+// Brands we carry, from WooCommerce's Brands taxonomy.
+function brandsHtml(t) {
+  const cards = BRANDS.map((b) => {
+    const items = PRODUCTS.filter((p) => region(p.origin) === b.name);
+    const img = b.image || (items[0] && items[0].photo);
+    return `<article class="br-card">
+      <button class="br-img" data-action="shopBrand" data-name="${esc(b.name)}">${img ? `<img src="${esc(img)}" alt="" loading="lazy">` : `<span class="br-mono">${esc(b.name.slice(0, 1))}</span>`}</button>
+      <div class="br-body">
+        <div class="br-top"><span class="br-name">${esc(b.name)}</span><span class="mono small muted">${t.brPieces(b.count)}</span></div>
+        <p class="br-desc">${b.desc.length ? esc(b.desc.slice(0, 2).join(' ')) : t.brNoDesc}</p>
+        ${items.length ? `<div class="br-thumbs">${items.slice(0, 4).map((p) => `<button class="br-thumb" data-action="openProduct" data-id="${p.id}" aria-label="${esc(p.name)}">${mediaHtml(p, false)}</button>`).join('')}</div>` : ''}
+        <button class="link-btn" data-action="shopBrand" data-name="${esc(b.name)}">${t.brShop(esc(b.name))} →</button>
       </div>
+    </article>`;
+  }).join('');
+  return `
+  <section class="br-hero">
+    <div class="cap muted">HAEMUN / ${t.brands}</div>
+    <div class="br-head">
+      <div><div class="cap br-k">${t.brKicker}</div><h1 class="br-h1">${t.brH}</h1></div>
+      <p class="br-lede">${esc(t.brLede)}</p>
+    </div>
+  </section>
+  <section class="sec-tight">
+    <div class="br-grid">${state.loading ? skeletons(2, '4 / 3') : cards}</div>
+    <p class="br-more">${t.brMore}</p>
+  </section>
+  <section class="ab-join br-cta">
+    <div class="ab-join-grid">
+      <div><div class="ab-join-h">${t.brStockH}</div><p>${esc(t.brStockB)}</p><div class="ab-join-links"><button class="ab-btn" data-action="enableTrade">${t.abTradeCta} →</button></div></div>
+      <div><div class="ab-join-h">${t.brMakerH}</div><p>${esc(t.brMakerB)}</p><div class="ab-join-links"><span class="ab-write">${t.abWrite}</span></div></div>
     </div>
   </section>`;
 }
@@ -789,7 +845,7 @@ function routeAndFooter(t) {
   <footer class="site-footer">
     <div class="f-col f-brand"><img class="f-mark" src="assets/haemun-mark.png" alt="" width="64" height="64" loading="lazy"><img class="f-logo" src="assets/haemun-wordmark.png" alt="Haemun" width="110" height="21" loading="lazy"><div class="muted">${t.footer}</div></div>
     <div class="f-col"><div class="f-h">${t.shop}</div>${CATS.map((c) => `<button class="tlink f-link" data-action="goCat" data-cat="${c}">${t.cats[c]}</button>`).join('')}</div>
-    <div class="f-col"><div class="f-h">${t.fHouse}</div><button class="tlink f-link" data-action="nav" data-view="drop">${t.volume}</button><button class="tlink f-link" data-action="nav" data-view="drops">${t.pastDrops}</button><button class="tlink f-link" data-action="nav" data-view="journal">${t.journal}</button><button class="tlink f-link" data-action="nav" data-view="about">${t.about}</button><button class="tlink f-link" data-action="enableTrade">${t.trade}</button></div>
+    <div class="f-col"><div class="f-h">${t.fHouse}</div><button class="tlink f-link" data-action="nav" data-view="drop">${t.volume}</button><button class="tlink f-link" data-action="nav" data-view="drops">${t.pastDrops}</button><button class="tlink f-link" data-action="nav" data-view="brands">${t.brands}</button><button class="tlink f-link" data-action="nav" data-view="journal">${t.journal}</button><button class="tlink f-link" data-action="nav" data-view="about">${t.about}</button><button class="tlink f-link" data-action="enableTrade">${t.trade}</button></div>
     <div class="f-col"><div class="f-h">${t.fHelp}</div><div class="muted">${t.fShip}<br>${t.fReturns}<br>${t.fContact}</div></div>
     <div class="f-col"><div class="f-h">Singapore</div><div class="muted">Haemun Pte. Ltd.<br>[ADDRESS]<br>© 2026</div></div>
   </footer>`;
@@ -890,6 +946,7 @@ function render() {
   if (state.view === 'home') body = homeHtml(t);
   else if (state.view === 'drop') body = dropHtml(t);
   else if (state.view === 'drops') body = dropsArchiveHtml(t);
+  else if (state.view === 'brands') body = brandsHtml(t);
   else if (state.view === 'mall') body = mallHtml(t);
   else if (state.view === 'journal') body = journalHtml(t);
   else if (state.view === 'article') {
@@ -914,7 +971,7 @@ function render() {
   if (video && videoAt) video.currentTime = videoAt;
   playIntro();
   syncHeader();
-  placeXing();
+  placeCountdown();
   showPick();
 }
 
@@ -966,6 +1023,7 @@ document.addEventListener('click', (e) => {
   else if (a === 'nav-journal') go({ view: 'journal', postId: null });
   else if (a === 'nav-about') go({ view: 'about' });
   else if (a === 'nav-drops') go({ view: 'drops' });
+  else if (a === 'shopBrand') go({ view: 'mall', cat: 'all', origin: el.dataset.name });
   else if (a === 'setCat') { go({ view: 'mall', cat: el.dataset.cat, origin: 'all' }); return; }
   else if (a === 'goCat') go({ view: 'mall', cat: el.dataset.cat || 'all', origin: 'all' });
   else if (a === 'openArticle') go({ view: 'article', postId: el.dataset.id });
@@ -1027,4 +1085,4 @@ document.addEventListener('click', (e) => {
 
 Object.assign(state, fromHash());
 render();
-Promise.allSettled([loadProducts(), loadPosts()]).finally(() => setState({ loading: false }));
+Promise.allSettled([loadProducts(), loadPosts(), loadBrands()]).finally(() => setState({ loading: false }));

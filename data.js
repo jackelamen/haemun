@@ -177,6 +177,24 @@ function mapWpPost(p) {
   };
 }
 
+// Brands come from WooCommerce's Brands taxonomy (Products > Brands). A
+// brand's description and image there show on the Brands page; without an
+// image, the brand's first product photo is used.
+let BRANDS = [];
+async function loadBrands() {
+  try {
+    const res = await fetch(`${WC_STORE_API}/products/brands`);
+    if (!res.ok) throw new Error('brands request failed: ' + res.status);
+    const items = await res.json();
+    BRANDS = (Array.isArray(items) ? items : []).filter((b) => b.count > 0).map((b) => ({
+      id: b.id, slug: b.slug, name: stripTags(b.name), count: b.count,
+      desc: htmlToBlocks(b.description), image: (b.image && (b.image.src || b.image.thumbnail)) || null,
+    }));
+  } catch (err) {
+    console.error('Haemun: could not load brands (' + err.message + ').');
+  }
+}
+
 async function loadPosts() {
   try {
     const res = await fetch(`${WP_API}/posts?_embed=wp:featuredmedia,wp:term&per_page=20`);
@@ -305,7 +323,7 @@ const T = {
     jIntro: 'Makers, materials and places.', featuredLabel: 'Featured', readStory: 'Read the story', by: 'Words', inStory: 'In this story', view: 'View',
     aboutH: 'A sea gate.\nA gate to SEA.', aboutLede: 'Hae (海) is Korean for sea. Written in English, it is also SEA: Southeast Asia. Haemun is the gate between Korean makers and the region, across the water that joins them.',
     nameKicker: 'The name', nameDefs: [['海', 'Hae', 'Sea', 'The water between Korea and Southeast Asia, crossed by every shipment we send.'], ['SEA', 'Hae, in English', 'Southeast Asia', 'Read the same sound in English and it names the region we serve, from Singapore outward.'], ['門', 'Mun', 'Gate', 'The way in, for Korean makers reaching the region and for customers reaching Korea.']], nameLine: 'Haemun: a sea gate, and Korea\u2019s gate to SEA.',
-    aboutParas: ['海門, haemun, is the old word for a harbour mouth: the gate between land and open water. We chose it because that is the job, twice over. We stand at the gate between Korean makers and Southeast Asian customers, and make the crossing simple for both.', 'Korea makes some of the most considered products in the world, but many of the best makers are too small to export. They have no one to handle import permits, HSA notification, labelling or logistics.', 'We do that work. We visit every maker, test what they make, publish a small selection each season, and keep the full range in our shop.'],
+    aboutParas: ['해문 (海門), haemun, is the old word for a harbour mouth: the gate between land and open water. We chose it because that is the job, twice over. We stand at the gate between Korean makers and Southeast Asian customers, and make the crossing simple for both.', 'Korea makes some of the most considered products in the world, but many of the best makers are too small to export. They have no one to handle import permits, HSA notification, labelling or logistics.', 'We do that work. We visit every maker, test what they make, publish a small selection each season, and keep the full range in our shop.'],
     aCarry: 'What we carry', aCarrySub: 'Five categories under one standard.',
     aHow: 'How we work', aHowSub: 'From a maker in Korea to a shelf in Singapore.',
     how: [['01', 'Select', 'We visit every maker in person. Fewer than one in twenty are taken on.'], ['02', 'Verify', 'Batches are tested and documented before shipping. Services are reviewed in person.'], ['03', 'Comply', 'HSA, AVS and customs requirements are handled by us, category by category.'], ['04', 'Deliver', 'Shipped by sea to Singapore, then delivered across Southeast Asia.']],
@@ -369,6 +387,50 @@ const T = {
 
 // Landing page (volume hero, cover band, "Six ways in").
 Object.assign(T.en, {
+  // Countdown band (home)
+  cdKicker: 'Next volume', cdDays: (n) => (n === 1 ? 'day' : 'days'), cdUntil: (vol, season, date) => `until Volume ${vol}${season ? ' · ' + season : ''} opens on ${date}`,
+  cdFrom: (vol, date) => `Volume ${vol} opened ${date}`, cdTo: (vol, date) => `Volume ${vol} arrives ${date}`,
+  cdToday: (d, n) => `Today · day ${d} of ${n}`, cdSee: 'See what’s in this volume',
+  // How the drops work (volume page)
+  dwLead: 'Four times a year we publish a volume: a small, seasonal edit of the best things we found in Korea. Here is how it works.',
+  dwCal: 'The year in volumes', dwOpen: 'Open now', dwNext: 'Next', dwLater: 'Coming', dwTodayMark: 'Today',
+  dwLife: 'The life of a piece',
+  dwSteps: [
+    ['Found', 'We visit makers across Korea in person and test what they make. Fewer than one in twenty are taken on.'],
+    ['Opens', 'On the first day of the season the volume goes live: one piece from each category, in small batches.'],
+    ['Sells through', 'Each batch is only as big as its maker can make well. When it sells out, it is gone until they make more.'],
+    ['Moves to the shop', 'When the next volume opens, earlier pieces stay in the shop while stock lasts, and the volume moves to Past drops.'],
+  ],
+  dwFaqH: 'Good to know',
+  dwFaq: (dates) => [
+    ['When does a new volume open?', `On the first day of each season: ${dates}.`],
+    ['Do I have to wait for a drop to buy?', 'No. Everything we carry is in the shop all year. A volume is our seasonal edit, not the only way in.'],
+    ['What if a piece sells out?', 'Batches are small on purpose. When one is gone, it is gone until the maker makes another.'],
+    ['What happens when a volume closes?', 'Its pieces move into the shop while stock lasts, and the volume itself is kept in Past drops.'],
+  ],
+  // About page
+  abKicker: 'About Haemun', abH: 'A sea gate.\nA gate to SEA.',
+  abLede: 'Haemun brings a small number of Korean makers, ateliers and clinics to Singapore and Southeast Asia, and handles everything between their door and yours.',
+  abNameH: 'The name', abNameIntro: 'Haemun (해문) is a Korean word. Like many Korean words, it can also be written in Hanja, the Chinese characters used in Korean: 海門.',
+  abParts: [
+    ['해', '海', 'hae', 'sea', 'The water between Korea and Southeast Asia, crossed by every shipment we send.'],
+    ['문', '門', 'mun', 'gate', 'The way in: for Korean makers reaching the region, and for customers reaching Korea.'],
+  ],
+  abSea: 'And one more reading. Say hae in English and you hear SEA: Southeast Asia, the region we serve.',
+  abSum: '해문 · 海門 · Haemun: a sea gate, and Korea’s gate to SEA.',
+  abWhyH: 'Why we exist', abHowH: 'How we work', abCarryH: 'What we carry',
+  abJoinH: 'Work with us', abMakerH: 'Korean makers', abMakerB: 'Too small for an export house? That is who we look for. We handle import, compliance, logistics and selling, online and with retail partners.',
+  abShopH: 'Retailers and clinics', abShopB: 'Trade accounts see wholesale tiers, minimum orders and compliance dossiers across every category.',
+  abBrandsCta: 'See the brands we carry', abTradeCta: 'Switch to trade view', abWrite: 'Write to us at [EMAIL]',
+  // Brands page
+  brands: 'Brands', brKicker: 'The makers', brH: 'The brands we carry',
+  brLede: 'Haemun is a gate for Korean makers too good to stay in Korea and too small for an export house. We introduce them here first, then work to put them on shelves across Singapore and Southeast Asia.',
+  brPieces: (n) => (n === 1 ? '1 piece' : `${n} pieces`), brShop: (name) => `Shop ${name}`, brNoDesc: 'Profile coming soon.',
+  brMore: 'More makers join with every volume.',
+  brStockH: 'Want one of these brands in your store?', brStockB: 'Retailers, clinics and distributors can see wholesale tiers, minimum orders and compliance dossiers in trade view, or ask us about exclusive regional distribution.',
+  brMakerH: 'Are you a Korean maker?', brMakerB: 'We are always looking. Tell us what you make and where you make it.',
+  whyName: 'Haemun (해문, 海門) is Korean for sea gate. Read in English, hae is also SEA: Southeast Asia.',
+
   sNew: 'Recent arrivals', sLow: 'Price: low to high', sHigh: 'Price: high to low', sName: 'Name: A\u2013Z',
   featuredH: 'Featured', featuredSub: 'One from each category, picked by us',
   filter: 'Filter', results: (n) => (n === 1 ? '1 result' : `${n} results`), searchShop: 'Search the shop',
@@ -381,7 +443,6 @@ Object.assign(T.en, {
   seaNames: ['YELLOW SEA', 'EAST CHINA SEA', 'SOUTH CHINA SEA'],
   jMore: (n) => `All ${n} stories in the Journal`,
   whyH: 'Shopping with Haemun', whySub: 'What to know before your first order',
-  whyName: 'Haemun (海門) means sea gate. Read in English, hae is also SEA: Southeast Asia.',
   why: (free) => [
     [`Free delivery over ${free}`, 'Shipped from Korea, delivered across Singapore and Southeast Asia.'],
     ['PayNow or card', 'Secure checkout through our store. Prices include 9% Singapore GST.'],
@@ -414,6 +475,46 @@ Object.assign(T.en, {
   },
 });
 Object.assign(T.ko, {
+  cdKicker: '다음 호', cdDays: () => '일', cdUntil: (vol, season, date) => `제${Number(vol)}호${season ? ' · ' + season : ''} 공개까지 (${date})`,
+  cdFrom: (vol, date) => `제${Number(vol)}호 ${date} 공개`, cdTo: (vol, date) => `제${Number(vol)}호 ${date} 도착`,
+  cdToday: (d, n) => `오늘 · ${n}일 중 ${d}일째`, cdSee: '이번 호 보기',
+  dwLead: '해문은 일 년에 네 번, 한국에서 찾은 가장 좋은 것을 모은 작은 시즌 에디트인 “호”를 발행합니다. 방식은 이렇습니다.',
+  dwCal: '일 년의 호', dwOpen: '지금 공개', dwNext: '다음', dwLater: '예정', dwTodayMark: '오늘',
+  dwLife: '제품의 여정',
+  dwSteps: [
+    ['발견', '한국 전역의 메이커를 직접 찾아가 제품을 테스트합니다. 스무 곳 중 한 곳 미만만 입점합니다.'],
+    ['공개', '시즌 첫날 새 호가 공개됩니다. 카테고리마다 하나씩, 모두 소량 생산입니다.'],
+    ['완판', '배치는 메이커가 잘 만들 수 있는 만큼만입니다. 품절되면 다시 만들 때까지 구할 수 없습니다.'],
+    ['숍으로', '다음 호가 공개되면 이전 제품은 재고가 있는 동안 숍에 남고, 호는 지난 드롭으로 옮겨집니다.'],
+  ],
+  dwFaqH: '알아 두세요',
+  dwFaq: (dates) => [
+    ['새 호는 언제 공개되나요?', `매 시즌 첫날, ${dates}에 공개됩니다.`],
+    ['드롭을 기다려야만 살 수 있나요?', '아니요. 모든 제품은 일 년 내내 숍에 있습니다. 호는 시즌 에디트일 뿐입니다.'],
+    ['제품이 품절되면요?', '배치는 일부러 작게 만듭니다. 품절되면 메이커가 다시 만들 때까지 구할 수 없습니다.'],
+    ['호가 마감되면 어떻게 되나요?', '제품은 재고가 있는 동안 숍으로 옮겨지고, 호는 지난 드롭에 기록으로 남습니다.'],
+  ],
+  abKicker: '해문 소개', abH: '바다의 문.\nSEA로 가는 문.',
+  abLede: '해문은 소수의 한국 메이커, 아틀리에, 클리닉을 싱가포르와 동남아시아로 전하고, 그 사이의 모든 일을 맡습니다.',
+  abNameH: '이름', abNameIntro: '해문은 한국어입니다. 많은 한국어 단어처럼 한자로도 쓸 수 있습니다: 海門.',
+  abParts: [
+    ['해', '海', 'hae', '바다', '한국과 동남아시아 사이의 바다. 저희가 보내는 모든 화물이 건너는 물길입니다.'],
+    ['문', '門', 'mun', '문', '들어가는 길. 동남아시아로 향하는 한국 메이커에게도, 한국을 만나는 고객에게도.'],
+  ],
+  abSea: '그리고 하나 더. “해”를 영어로 읽으면 SEA, 저희가 일하는 동남아시아가 됩니다.',
+  abSum: '해문 · 海門 · Haemun: 바다의 문, 그리고 SEA로 가는 한국의 문.',
+  abWhyH: '해문이 하는 일', abHowH: '일하는 방식', abCarryH: '취급 카테고리',
+  abJoinH: '함께하기', abMakerH: '한국 메이커', abMakerB: '수출 회사와 일하기엔 규모가 작으신가요? 저희가 찾는 분들입니다. 수입, 규정 준수, 물류, 판매를 온라인과 리테일 파트너를 통해 맡습니다.',
+  abShopH: '리테일러와 클리닉', abShopB: '트레이드 계정에서 모든 카테고리의 도매가, 최소 주문 수량, 규정 준수 자료를 볼 수 있습니다.',
+  abBrandsCta: '취급 브랜드 보기', abTradeCta: '트레이드 보기로 전환', abWrite: '[EMAIL]로 연락 주세요',
+  brands: '브랜드', brKicker: '메이커', brH: '해문이 소개하는 브랜드',
+  brLede: '해문은 한국에만 머물기엔 너무 좋고, 수출 회사와 일하기엔 규모가 작은 메이커를 위한 문입니다. 먼저 이곳에서 소개하고, 싱가포르와 동남아시아의 매장 진열대에 오르도록 돕습니다.',
+  brPieces: (n) => `${n}개 제품`, brShop: (name) => `${name} 쇼핑하기`, brNoDesc: '소개가 곧 업데이트됩니다.',
+  brMore: '호가 나올 때마다 새로운 메이커가 합류합니다.',
+  brStockH: '이 브랜드를 매장에 들이고 싶으신가요?', brStockB: '리테일러, 클리닉, 유통사는 트레이드 보기에서 도매가, 최소 주문 수량, 규정 준수 자료를 확인하거나 지역 독점 유통을 문의할 수 있습니다.',
+  brMakerH: '한국 메이커이신가요?', brMakerB: '언제나 찾고 있습니다. 무엇을 어디서 만드는지 알려 주세요.',
+  whyName: '해문(海門)은 바다의 문이라는 뜻의 한국어입니다. 영어로 읽으면 “해”는 SEA, 곧 동남아시아이기도 합니다.',
+
   sNew: '최신순', sLow: '낮은 가격순', sHigh: '높은 가격순', sName: '이름순',
   featuredH: '추천', featuredSub: '카테고리마다 하나씩 고른 추천 제품',
   filter: '필터', results: (n) => `${n}개 제품`, searchShop: '숍에서 검색',
@@ -426,7 +527,6 @@ Object.assign(T.ko, {
   seaNames: ['황해', '동중국해', '남중국해'],
   jMore: (n) => `저널의 이야기 ${n}편 모두 보기`,
   whyH: '해문에서 쇼핑하기', whySub: '첫 주문 전에 알아 두세요',
-  whyName: '해문(海門)은 바다의 문이라는 뜻입니다. 영어로 읽으면 "해"는 SEA, 곧 동남아시아이기도 합니다.',
   why: (free) => [
     [`${free} 이상 무료 배송`, '한국에서 직송해 싱가포르와 동남아시아 전역으로 배송합니다.'],
     ['PayNow 또는 카드 결제', '저희 스토어의 보안 결제를 이용합니다. 가격에는 싱가포르 GST 9%가 포함되어 있습니다.'],
