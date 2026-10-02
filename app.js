@@ -264,35 +264,43 @@ function dropsHtml(t) {
   const si = seasonInfo();
   const notes = POSTS.find((j) => j.cat === 'house');
   const loc = state.lang === 'ko' ? 'ko-KR' : 'en-SG';
-  // Twelve months from the current volume's opening month.
-  const months = Array.from({ length: 12 }, (_, i) => new Date(si.open.getFullYear(), si.open.getMonth() + i, 1));
-  let n = Number(si.curVol) - 1;
-  const cells = months.map((m) => {
-    const drop = DROP_MONTHS.includes(m.getMonth());
-    if (drop) n++;
-    const status = !drop ? '' : m.getTime() === si.open.getTime() ? 'open' : m.getTime() === si.next.getTime() ? 'next' : 'later';
-    const label = { open: t.dwOpen, next: t.dwNext, later: t.dwLater }[status];
-    return `<div class="dc${drop ? ' dc-drop dc-' + status : ''}">
-      <span class="dc-m mono small">${m.toLocaleDateString(loc, { month: 'short' })}${m.getMonth() === 0 || m === months[0] ? ' ' + m.getFullYear() : ''}</span>
-      ${drop ? `<span class="dc-card"><span class="dc-vol">${t.volumeN(String(n).padStart(2, '0'))}</span><span class="dc-season">${DROP_MONTHS.length === 12 ? '' : t.seasons[m.getMonth()]}</span><span class="dc-status cap">${status === 'open' ? `<span class="stamp">${label}</span>` : label}</span></span>` : ''}
-    </div>`;
+  // The next four volumes, starting with the one that is open now.
+  const steps = [];
+  let n = Number(si.curVol);
+  for (let m = new Date(si.open); steps.length < 4; m = new Date(m.getFullYear(), m.getMonth() + 1, 1)) {
+    if (!DROP_MONTHS.includes(m.getMonth())) continue;
+    steps.push({ n: String(n++).padStart(2, '0'), m, status: steps.length === 0 ? 'open' : steps.length === 1 ? 'next' : 'later' });
+  }
+  const cards = steps.map((v) => {
+    const label = { open: t.dwOpen, next: t.dwNext, later: t.dwLater }[v.status];
+    const when = v.m.toLocaleDateString(loc, { day: 'numeric', month: 'long', year: 'numeric' });
+    return `<li class="dv dv-${v.status}">
+      <span class="dv-dot"></span>
+      <span class="dv-no">${v.n}</span>
+      <span class="dv-name">${t.volumeN(v.n)}</span>
+      <span class="dv-season">${DROP_MONTHS.length === 12 ? '' : t.seasons[v.m.getMonth()]}</span>
+      <span class="dv-when cap">${v.status === 'open' ? t.dwOpenedOn : t.dwOpens} ${when}</span>
+      <span class="dv-status cap">${v.status === 'open' ? `<span class="stamp">${label}</span>` : label}</span>
+    </li>`;
   }).join('');
-  const span = months[11].getTime() + 31 * 86400000 - months[0].getTime();
-  const todayPct = (((Date.now() - months[0].getTime()) / span) * 100).toFixed(2);
   const dates = DROP_MONTHS.map((m) => new Date(2026, m, 1).toLocaleDateString(loc, { day: 'numeric', month: 'long' }));
   const dateList = state.lang === 'ko' ? dates.join(', ') : dates.slice(0, -1).join(', ') + ' and ' + dates[dates.length - 1];
   return `<div class="dw">
-    <p class="dw-lead">${esc(t.dwLead)}</p>
-    <div class="dw-block">
-      <div class="cap dw-h">${t.dwCal}</div>
-      <div class="dcal"><div class="dcal-row">${cells}</div><span class="dcal-today" style="left:${todayPct}%"><span class="cap">${t.dwTodayMark}</span></span></div>
+    <div class="dw-intro">
+      <div class="cap dw-kicker">${t.dwKicker}</div>
+      <p class="dw-lead">${esc(t.dwLead)}</p>
     </div>
+    <div class="dw-ideas">${t.dwIdeas.map(([h, b], i) => `<div class="dw-idea"><span class="dl-n mono small">${String(i + 1).padStart(2, '0')}</span><h3>${h}</h3><p>${b}</p></div>`).join('')}</div>
     <div class="dw-block">
-      <div class="cap dw-h">${t.dwLife}</div>
+      <div class="dw-bh"><span class="cap">${t.dwCal}</span></div>
+      <ol class="dvols">${cards}</ol>
+    </div>
+    <div class="dw-dark">
+      <div class="dw-bh dw-bh-dark"><span class="cap">${t.dwLife}</span><span class="dw-sub">${t.dwLifeSub}</span></div>
       <ol class="dlife">${t.dwSteps.map(([h, b], i) => `<li><span class="dl-n mono small">${String(i + 1).padStart(2, '0')}</span><span class="dl-h">${h}</span><p>${b}</p></li>`).join('')}</ol>
     </div>
     <div class="dw-block">
-      <div class="cap dw-h">${t.dwFaqH}</div>
+      <div class="dw-bh"><span class="cap">${t.dwFaqH}</span></div>
       <div class="dfaq">${t.dwFaq(dateList).map(([q, a]) => `<div class="dq"><div class="dq-q">${q}</div><p>${a}</p></div>`).join('')}</div>
     </div>
     ${notes ? `<button class="link-btn" data-action="openArticle" data-id="${notes.id}">${t.dropNotes} →</button>` : ''}
