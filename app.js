@@ -79,7 +79,12 @@ window.addEventListener('popstate', () => {
   afterPop = null;
   if (!samePage) window.scrollTo(0, 0);
 });
+function stepPhoto(d) {
+  const raw = findProduct(state.activeId); const n = raw && raw.gallery ? raw.gallery.length : 0;
+  if (n > 1) setState({ photoIdx: (state.photoIdx + d + n) % n });
+}
 document.addEventListener('keydown', (e) => {
+  if (state.activeId && !state.searchOpen && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { stepPhoto(e.key === 'ArrowLeft' ? -1 : 1); return; }
   if (e.key === '/' && !state.searchOpen && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); openSearch(); return; }
   if (e.key === 'Enter' && state.searchOpen) { const first = document.querySelector('#search-results [data-action="openProduct"]'); if (first) first.click(); return; }
   if (e.key !== 'Escape') return;
@@ -555,10 +560,16 @@ function pdpHtml(t) {
   const related = suggest(raw, [raw.id], 3);
   const gallery = raw.gallery || [];
   const mainImg = gallery.length ? `<img src="${esc(gallery[state.photoIdx] || gallery[0])}" alt="${esc(raw.name)}" style="width:100%;height:100%;object-fit:cover;display:block">` : mediaHtml(raw);
-  const thumbs = gallery.length > 1 ? `<div class="pdp-thumbs">${gallery.map((src, i) => `<button class="pdp-thumb" data-action="setPhoto" data-idx="${i}" aria-label="Photo ${i + 1}" style="${i === state.photoIdx ? 'border-color:#0B0B0C' : 'border-color:transparent'}"><img src="${esc(src)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block"></button>`).join('')}</div>` : '';
+  const thumbs = gallery.length > 1 ? `<div class="pdp-thumbs">${gallery.map((src, i) => `<button class="pdp-thumb${i === state.photoIdx ? ' on' : ''}" data-action="setPhoto" data-idx="${i}" aria-label="Photo ${i + 1}" aria-pressed="${i === state.photoIdx}"><img src="${esc(src)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block"></button>`).join('')}</div>` : '';
   return `
   <div class="modal-backdrop pdp" role="dialog" aria-modal="true" aria-label="${esc(raw.name)}">
-    <div class="pdp-img" style="background:${raw.bg}">${mainImg}<span class="cap ov-tl">${v.no}</span>${thumbs}</div>
+    <div class="pdp-img">
+      <div class="pdp-photo" style="background:${raw.bg}">${mainImg}<span class="cap ov-tl">${v.no}</span>${gallery.length > 1 ? `
+        <button class="pdp-arrow prev" data-action="photoStep" data-delta="-1" aria-label="Previous photo">‹</button>
+        <button class="pdp-arrow next" data-action="photoStep" data-delta="1" aria-label="Next photo">›</button>
+        <span class="cap pdp-count">${state.photoIdx + 1} / ${gallery.length}</span>` : ''}</div>
+      ${thumbs}
+    </div>
     <div class="pdp-body">
       <div class="pdp-top"><span class="cap muted">${t.shop} / ${v.catLabel}</span><button class="tlink" data-action="closeProduct">${t.close} ✕</button></div>
       <div class="pdp-origin flex-c">${dotHtml(v.dotColor)}${esc(raw.origin || v.catLabel)}</div>
@@ -660,6 +671,7 @@ document.addEventListener('click', (e) => {
     location.href = `${WP_SITE}/?haemun_cart=${live.map((id) => id.slice(2) + ':' + state.cart[id]).join(',')}`;
   }
   else if (a === 'setPhoto') setState({ photoIdx: Number(el.dataset.idx) });
+  else if (a === 'photoStep') stepPhoto(Number(el.dataset.delta));
   else if (a === 'quick') {
     const p = PRODUCTS.find((x) => x.id === el.dataset.id);
     if (p.service || state.b2b) openProduct(p.id, { qty: state.b2b && !p.service ? p.moq : 1, tab: p.service ? 'form' : 'spec' });
