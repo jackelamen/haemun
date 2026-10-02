@@ -34,6 +34,8 @@ const VOL1 = { year: 2026, month: 8 }; // Volume 01: Autumn 2026
 
 // Currency reported by the store; drives the price prefix site-wide.
 let STORE_CURRENCY = 'SGD';
+// 'live' once WooCommerce answers, 'failed' if it can't be reached.
+let LIVE_STATUS = 'pending';
 
 // Best-effort match from a WooCommerce category name to one of our five
 // fixed categories, since WooCommerce's own category list is free-form.
@@ -86,13 +88,15 @@ async function loadProducts() {
     const res = await fetch(`${WC_STORE_API}/products?per_page=100`);
     if (!res.ok) throw new Error('WooCommerce Store API request failed: ' + res.status);
     const items = await res.json();
-    if (!Array.isArray(items) || !items.length) return; // keep mock fallback
+    if (!Array.isArray(items) || !items.length) { LIVE_STATUS = 'empty'; return; } // keep mock fallback
     const mapped = items.map(mapWcProduct);
     if (items[0].prices && items[0].prices.currency_code) STORE_CURRENCY = items[0].prices.currency_code;
     PRODUCTS.length = 0;
     PRODUCTS.push(...mapped);
+    LIVE_STATUS = 'live';
   } catch (err) {
-    console.warn('Falling back to mock products —', err.message);
+    LIVE_STATUS = 'failed';
+    console.error('Haemun: could not load WooCommerce products from ' + WC_STORE_API + ' (' + err.message + '). If this is a CORS error, check the Access-Control rules in functions.php. Showing sample products.');
   }
 }
 
@@ -226,6 +230,7 @@ const T = {
       ['02', 'Small batches, chosen in person', 'Every piece comes from a maker we visited, in the quantity they can make well. When a batch sells out, it is gone until they make more.'],
       ['03', 'Then into the shop', 'When the next volume opens, earlier pieces move to the shop and stay there while stock lasts.']],
     nextDrop: (vol, season, date) => `Volume ${vol}${season ? ' · ' + season : ''} opens ${date}`, seasons: ['Winter', 'Winter', 'Spring', 'Spring', 'Spring', 'Summer', 'Summer', 'Summer', 'Autumn', 'Autumn', 'Autumn', 'Winter'], daysLeft: (n) => (n === 1 ? '1 day to go' : `${n} days to go`), dropNotes: 'Notes on Volume 01',
+    shopIntro: 'Everything we carry, across five categories.', allOrigins: 'All origins', allBrands: 'All brands', liveFail: 'We couldn\u2019t reach the live store just now, so you\u2019re seeing sample products. Please try again shortly.',
     search: 'Search', searchPh: 'Search products, makers, categories', noResults: 'Nothing found. Try a category or maker name.', brand: 'Brand', demoNote: 'These are sample products and can\u2019t be purchased yet.', toCheckout: 'Taking you to secure checkout\u2026',
     empty: 'Your bag is empty.', subtotal: 'Subtotal', gst: 'Prices include 9% Singapore GST', checkout: 'Proceed to PayNow / Card',
     pr: [['37.56N', 'Seoul', 'Chosen in person. Fewer than one in twenty makers make it.'], ['4,630 KM', 'At sea', 'Batch records and cold-chain data travel with every shipment.'], ['1.35N', 'Singapore', 'Cleared and compliant for its category before anything is listed.']] },
@@ -266,6 +271,7 @@ const T = {
       ['02', '직접 고른 소량 생산', '모든 제품은 직접 방문한 메이커가 잘 만들 수 있는 만큼만 만듭니다. 배치가 소진되면 다음 생산까지 기다려야 합니다.'],
       ['03', '그다음은 숍으로', '다음 호가 열리면 이전 제품은 숍으로 옮겨져 재고가 있는 동안 판매됩니다.']],
     nextDrop: (vol, season, date) => `제${vol}호${season ? ' · ' + season : ''} ${date} 공개`, seasons: ['겨울', '겨울', '봄', '봄', '봄', '여름', '여름', '여름', '가을', '가을', '가을', '겨울'], daysLeft: (n) => `${n}일 남음`, dropNotes: '제1호 노트 읽기',
+    shopIntro: '다섯 카테고리에 걸친 모든 제품.', allOrigins: '모든 원산지', allBrands: '모든 브랜드', liveFail: '지금은 스토어에 연결할 수 없어 샘플 제품을 보여 드립니다. 잠시 후 다시 시도해 주세요.',
     search: '검색', searchPh: '제품, 메이커, 카테고리 검색', noResults: '결과가 없습니다. 카테고리나 메이커 이름으로 검색해 보세요.', brand: '브랜드', demoNote: '샘플 제품으로, 아직 구매할 수 없습니다.', toCheckout: '보안 결제 페이지로 이동 중\u2026',
     empty: '장바구니가 비어 있습니다.', subtotal: '소계', gst: '싱가포르 GST 9% 포함', checkout: 'PayNow / 카드 결제',
     pr: [['37.56N', '서울', '직접 방문해 고릅니다. 스무 곳 중 한 곳 미만만 입점합니다.'], ['4,630 KM', '바다 위', '배치 기록과 콜드체인 데이터가 함께 이동합니다.'], ['1.35N', '싱가포르', '카테고리별 규정 준수를 마친 뒤 등록됩니다.']] },

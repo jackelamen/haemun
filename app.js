@@ -87,6 +87,11 @@ document.addEventListener('keydown', (e) => {
   else if (state.activeId) closeProduct();
   else if (state.cartOpen) setState({ cartOpen: false });
 });
+document.addEventListener('change', (e) => {
+  const k = e.target.dataset && e.target.dataset.change;
+  if (k === 'origin') setState({ origin: e.target.value });
+  else if (k === 'sort') setState({ sort: e.target.value });
+});
 document.addEventListener('input', (e) => {
   if (e.target.id !== 'search-input') return;
   state.q = e.target.value;
@@ -361,42 +366,37 @@ function homeHtml(t) {
 }
 
 function mallHtml(t) {
+  const live = PRODUCTS.some((p) => p.id.startsWith('wc'));
   let mall = PRODUCTS.filter((p) => (state.cat === 'all' || p.cat === state.cat) && (state.origin === 'all' || region(p.origin) === state.origin));
   if (state.sort === 'low') mall = mall.slice().sort((a, b) => a.price - b.price);
   if (state.sort === 'high') mall = mall.slice().sort((a, b) => b.price - a.price);
   const mallTitle = state.cat === 'all' ? t.shopAll : t.cats[state.cat];
-  const catFilters = ['all'].concat(CATS).map((c) => {
-    const count = String(PRODUCTS.filter((p) => c === 'all' || p.cat === c).length).padStart(2, '0');
-    const active = state.cat === c;
-    return `<button class="filter-row" data-action="setCat" data-cat="${c}" style="${active ? 'color:#0B0B0C;font-weight:500' : 'color:#7A7A78'}">
-      <span class="flex-c">${c === 'all' ? '<span class="dot" style="background:transparent"></span>' : dotHtml(CAT_COLOR[c])}${c === 'all' ? t.shopAll : t.cats[c]}</span><span class="mono small">${count}</span>
-    </button>`;
+  const intro = state.cat === 'all' ? t.shopIntro : t.catDesc[state.cat];
+  const tabs = ['all'].concat(CATS).map((c) => {
+    const n = PRODUCTS.filter((p) => c === 'all' || p.cat === c).length;
+    return `<button class="shop-tab${state.cat === c ? ' on' : ''}" data-action="setCat" data-cat="${c}" aria-pressed="${state.cat === c}">${c === 'all' ? '' : dotHtml(CAT_COLOR[c])}<span>${c === 'all' ? t.all : t.cats[c]}</span><span class="shop-tab-n">${n}</span></button>`;
   }).join('');
-  const originList = ['all'].concat([...new Set(PRODUCTS.map((p) => region(p.origin)).filter(Boolean))]);
-  const origins = originList.map((o) => `<button class="origin-chip" data-action="setOrigin" data-origin="${o}" style="${state.origin === o ? 'border-color:#0B0B0C;background:#0B0B0C;color:#FFFFFF' : 'border-color:#E0E0DD;background:transparent;color:#0B0B0C'}">${o === 'all' ? t.all : o}</button>`).join('');
-  const sorts = [['feat', t.sNew], ['low', t.sLow], ['high', t.sHigh]].map(([id, label]) => `<button class="tlink" data-action="setSort" data-sort="${id}" style="${state.sort === id ? 'color:#0B0B0C;text-decoration:underline' : 'color:#7A7A78'}">${label}</button>`).join('');
+  const originList = [...new Set(PRODUCTS.filter((p) => state.cat === 'all' || p.cat === state.cat).map((p) => region(p.origin)).filter(Boolean))].sort();
+  const originSel = originList.length > 1 ? `<label class="shop-sel"><span class="sr-only">${live ? t.brand : t.origin}</span><select data-change="origin">
+      <option value="all">${live ? t.allBrands : t.allOrigins}</option>${originList.map((o) => `<option value="${esc(o)}"${state.origin === o ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select></label>` : '';
+  const sortSel = `<label class="shop-sel"><span class="sr-only">${t.sort}</span><select data-change="sort">${[['feat', t.sNew], ['low', t.sLow], ['high', t.sHigh]].map(([id, label]) => `<option value="${id}"${state.sort === id ? ' selected' : ''}>${t.sort}: ${label}</option>`).join('')}</select></label>`;
+  const filtered = state.origin !== 'all' ? `<button class="shop-chip" data-action="setOrigin" data-origin="all">${esc(state.origin)} <span aria-hidden="true">✕</span></button>` : '';
   const medNote = state.cat === 'medical' ? `<div class="med-note"><span>${t.medNote}</span><span class="cap" style="color:#2E6B5E">${t.medTag}</span></div>` : '';
-  const items = state.loading ? skeletons(6, '3 / 4') : mall.length ? mall.map((p) => cardHtml(p, t, 460, { number: false })).join('') : `<div class="empty">${t.none}</div>`;
+  const offline = LIVE_STATUS === 'failed' ? `<div class="live-note">${t.liveFail}</div>` : '';
+  const items = state.loading ? skeletons(6, '3 / 4') : mall.length ? mall.map((p) => cardHtml(p, t, 460, { number: false })).join('') : `<div class="empty">${t.none} <button class="link-btn" data-action="clearFilters">${t.clear}</button></div>`;
   return `
-  <section class="sec-tight">
-    <div class="cap muted">HAEMUN / ${t.shop} / ${mallTitle}</div>
-    <div class="shop-head">
-      <div class="flex-b"><span class="shop-title">${mallTitle}</span><span class="mono muted">${String(mall.length).padStart(2, '0')} ${t.objects}</span></div>
-      <div class="sort-row"><span class="muted">${t.sort}</span>${sorts}</div>
-    </div>
+  <section class="shop-hero">
+    <h1 class="shop-title">${mallTitle}</h1>
+    <p class="shop-intro">${intro}</p>
   </section>
-  <section class="shop-layout">
-    <aside class="shop-side">
-      <div class="side-h">${t.category}</div>
-      ${catFilters}
-      <div class="side-h" style="margin-top:32px">${PRODUCTS.some((p) => p.id.startsWith('wc')) ? t.brand : t.origin}</div>
-      <div class="origin-wrap">${origins}</div>
-      <button class="link-btn muted" data-action="clearFilters" style="margin-top:20px">${t.clear}</button>
-    </aside>
-    <div>
-      ${medNote}
-      <div class="grid3-56">${items}</div>
+  <nav class="shop-tabs" aria-label="${t.category}"><div class="shop-tabs-in">${tabs}</div></nav>
+  <section class="shop-main">
+    <div class="shop-bar">
+      <div class="shop-count"><span>${mall.length} ${t.objects}</span>${filtered}</div>
+      <div class="shop-tools">${originSel}${sortSel}</div>
     </div>
+    ${offline}${medNote}
+    <div class="shop-grid">${items}</div>
   </section>`;
 }
 
@@ -647,7 +647,7 @@ document.addEventListener('click', (e) => {
   if (a === 'nav') go({ view: el.dataset.view, postId: null });
   else if (a === 'nav-journal') go({ view: 'journal', postId: null });
   else if (a === 'nav-about') go({ view: 'about' });
-  else if (a === 'setCat') { go({ view: 'mall', cat: el.dataset.cat }); return; }
+  else if (a === 'setCat') { go({ view: 'mall', cat: el.dataset.cat, origin: 'all' }); return; }
   else if (a === 'goCat') go({ view: 'mall', cat: el.dataset.cat || 'all', origin: 'all' });
   else if (a === 'openArticle') go({ view: 'article', postId: el.dataset.id });
   else if (a === 'openProduct') openProduct(el.dataset.id);
