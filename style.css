@@ -232,7 +232,6 @@ button:disabled { opacity: .35; cursor: not-allowed; }
 /* ---- about: the name ---- */
 
 /* ---- monthly drops ---- */
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
 
 /* ---- journal ---- */
 .j-grid { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); column-gap: 24px; row-gap: 64px; padding-top: 32px; border-top: 1px solid #E6E6E3; }
@@ -395,7 +394,6 @@ button:disabled { opacity: .35; cursor: not-allowed; }
   linear-gradient(180deg, rgba(11,11,12,.5) 0%, rgba(11,11,12,0) 18%, rgba(11,11,12,0) 70%, rgba(11,11,12,.5) 100%); }
 .vh-copy { position: absolute; left: 40px; bottom: 64px; z-index: 2; max-width: 620px; }
 .vh-kicker { display: flex; align-items: center; gap: 12px; color: rgba(255,255,255,.88); }
-.vh-live { width: 8px; height: 8px; border-radius: 50%; background: #C1272D; box-shadow: 0 0 0 4px rgba(193,39,45,.3); }
 .vh-h1 { margin: 22px 0 0; font-size: clamp(72px, 10.5vw, 168px); font-weight: 300; line-height: .88; letter-spacing: -.045em; white-space: pre-line; }
 :lang(ko) .vh-h1 { font-size: clamp(56px, 7.6vw, 120px); line-height: 1; letter-spacing: -.03em; }
 .vh-dek { max-width: 440px; margin: 26px 0 0; font-size: 17px; line-height: 1.55; color: rgba(255,255,255,.86); }
@@ -442,7 +440,6 @@ button:disabled { opacity: .35; cursor: not-allowed; }
 }
 
 /* The crossing: the real route, Seoul to Singapore, on a nautical grid */
-.xnext-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: #C1272D; box-shadow: 0 0 0 4px rgba(193,39,45,.25); }
 
 /* Shop by category: general photos, readable labels, top-aligned tiles */
 .cat-grid { align-items: start; }
@@ -599,7 +596,7 @@ button:disabled { opacity: .35; cursor: not-allowed; }
 .cd-done { position: absolute; left: 0; top: 0; bottom: 0; width: var(--at); background: #FFFFFF; }
 .cd-tick { position: absolute; top: -4px; width: 1px; height: 10px; background: rgba(255,255,255,.22); }
 .cd-port { position: absolute; top: 50%; width: 11px; height: 11px; border: 1.5px solid #FFFFFF; border-radius: 50%; background: #0B0B0C; transform: translate(-50%, -50%); }
-.cd-ship { position: absolute; top: 50%; left: var(--at); width: 14px; height: 14px; border-radius: 50%; background: #C1272D; transform: translate(-50%, -50%); box-shadow: 0 0 0 6px rgba(193,39,45,.22); }
+.cd-ship { position: absolute; top: 50%; left: var(--at); width: 14px; height: 14px; border-radius: 50%; background: #C1272D; transform: translate(-50%, -50%); }
 .cd-line.sail .cd-done, .cd-line.sail .cd-ship { transition: width 1.8s cubic-bezier(.4,0,.2,1), left 1.8s cubic-bezier(.4,0,.2,1); }
 .cd-tag { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); white-space: nowrap; color: #FFFFFF; }
 .cd-tag.at-start { left: -7px; transform: none; }
@@ -759,5 +756,11 @@ button:disabled { opacity: .35; cursor: not-allowed; }
 .vh-ask { margin-top: 30px; }
 
 /* Header: the current volume is always marked */
-.nav-vol { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; color: #0B0B0C !important; }
-.nav-live { width: 7px; height: 7px; border-radius: 50%; background: #C1272D; box-shadow: 0 0 0 3px rgba(193,39,45,.18); animation: pulse 2.4s ease-in-out infinite; }
+.nav-vol { display: inline-flex; align-items: center; gap: 7px; font-weight: 500; color: #0B0B0C !important; }
+
+/* The stamp: a flat red seal (도장) that marks what is live right now.
+   The only highlight treatment on the site; no glow, no motion. */
+.stamp { display: inline-flex; align-items: center; height: 18px; padding: 0 6px; background: #C1272D; color: #FFFFFF; font: 500 10px/1 'IBM Plex Mono', monospace; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
+.stamp-sm { height: 15px; padding: 0 4px; font-size: 9px; letter-spacing: .1em; }
+.vh-kicker .stamp { margin-left: 4px; }
+.site-header.on-film .stamp { color: #FFFFFF !important; }

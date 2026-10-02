@@ -258,7 +258,7 @@ function header(t) {
   <div class="cap annbar"><span>${t.ann1}</span><span class="sep">·</span><span>${t.ann2}</span></div>
   <header class="site-header${filmHeader() ? ' on-film' : ''}">
     <nav class="hnav">
-      <button class="tlink nav-vol" data-action="nav" data-view="drop" style="${navStyle('drop')}"><span class="nav-live"></span>${t.volume}</button>${nav('mall', t.shopAll)}${nav('brands', t.brands)}${nav('journal', t.journal)}${nav('about', t.about)}
+      <button class="tlink nav-vol" data-action="nav" data-view="drop" style="${navStyle('drop')}">${t.volume}<span class="stamp stamp-sm">${t.now}</span></button>${nav('mall', t.shopAll)}${nav('brands', t.brands)}${nav('journal', t.journal)}${nav('about', t.about)}
     </nav>
     <button class="logo" data-action="nav" data-view="home">
       <img class="logo-mark on-light" src="assets/haemun-mark.png" alt="" width="40" height="40"><img class="logo-word on-light" src="assets/haemun-wordmark.png" alt="Haemun" width="92" height="17"><img class="logo-mark on-dark" src="assets/haemun-mark-white.png" alt="" width="40" height="40"><img class="logo-word on-dark" src="assets/haemun-wordmark-white.png" alt="" width="92" height="17">
@@ -312,7 +312,7 @@ function dropsHtml(t) {
     const label = { open: t.dwOpen, next: t.dwNext, later: t.dwLater }[status];
     return `<div class="dc${drop ? ' dc-drop dc-' + status : ''}">
       <span class="dc-m mono small">${m.toLocaleDateString(loc, { month: 'short' })}${m.getMonth() === 0 || m === months[0] ? ' ' + m.getFullYear() : ''}</span>
-      ${drop ? `<span class="dc-card"><span class="dc-vol">${t.volumeN(String(n).padStart(2, '0'))}</span><span class="dc-season">${DROP_MONTHS.length === 12 ? '' : t.seasons[m.getMonth()]}</span><span class="dc-status cap">${status === 'open' ? '<span class="vh-live"></span>' : ''}${label}</span></span>` : ''}
+      ${drop ? `<span class="dc-card"><span class="dc-vol">${t.volumeN(String(n).padStart(2, '0'))}</span><span class="dc-season">${DROP_MONTHS.length === 12 ? '' : t.seasons[m.getMonth()]}</span><span class="dc-status cap">${status === 'open' ? `<span class="stamp">${label}</span>` : label}</span></span>` : ''}
     </div>`;
   }).join('');
   const span = months[11].getTime() + 31 * 86400000 - months[0].getTime();
@@ -357,10 +357,10 @@ function volHeroHtml(t, vol) {
     <div class="vh-film">${media}</div>
     ${film}
     <div class="vh-copy">
-      <div class="cap vh-kicker"><span class="vh-live"></span>${t.heroKicker(VOLUME.no, season)}</div>
+      <div class="cap vh-kicker">${t.heroKicker(VOLUME.no, season)}<span class="stamp">${t.openNow}</span></div>
       <h1 class="vh-h1">${esc(t.heroH)}</h1>
       <p class="vh-dek">${esc(t.heroDek)}</p>
-      <button class="vh-cta" data-action="nav" data-view="drop"><span class="vh-live"></span>${t.volCta(VOLUME.no)} <span aria-hidden="true">→</span></button>
+      <button class="vh-cta" data-action="nav" data-view="drop">${t.volCta(VOLUME.no)} <span aria-hidden="true">→</span></button>
       ${chips ? `<div class="vh-ask"><div class="cap vh-q">${t.curiousQ}</div><div class="vh-chips">${chips}</div></div>` : ''}
       <div class="vh-links"><button class="vh-link dim cap" data-action="goCat" data-cat="all">${t.shopEverything(PRODUCTS.length)}</button></div>
     </div>
@@ -401,7 +401,7 @@ function countdownHtml(t) {
   const ticks = Array.from({ length: weeks - 1 }, (_, i) => `<span class="cd-tick" style="left:${(((i + 1) * 7) / si.total * 100).toFixed(2)}%"></span>`).join('');
   return `<section class="cd" aria-label="${t.cdKicker}">
     <div class="cd-left">
-      <div class="cap cd-k"><span class="xnext-dot"></span>${t.cdKicker}</div>
+      <div class="cap cd-k">${t.cdKicker}</div>
       <div class="cd-num"><span class="cd-n">${si.days}</span><span class="cd-u">${t.cdDays(si.days)}</span></div>
       <div class="cd-until">${t.cdUntil(si.vol, season, si.date)}</div>
     </div>
@@ -514,7 +514,7 @@ function dropHtml(t) {
     <div class="cap muted">HAEMUN / ${t.volume}</div>
     <div class="drop-head">
       <div>
-        <div class="cap vh-kicker drop-kicker"><span class="vh-live"></span>${t.heroKicker(VOLUME.no, season)}</div>
+        <div class="cap vh-kicker drop-kicker">${t.heroKicker(VOLUME.no, season)}<span class="stamp">${t.openNow}</span></div>
         <h1 class="drop-h1">${t.volume}</h1>
       </div>
       <div class="drop-intro">
@@ -550,7 +550,7 @@ function dropsArchiveHtml(t) {
     <div class="archive">
       <button class="arc-card" data-action="nav" data-view="drop">
         <span class="arc-img"><img src="${VOLUME.hero.wide}" alt="" loading="lazy"></span>
-        <span class="cap arc-meta"><span class="flex-c"><span class="vh-live"></span>${t.openNow}</span><span>${season}</span></span>
+        <span class="cap arc-meta"><span class="stamp">${t.openNow}</span><span>${season}</span></span>
         <span class="arc-title">${t.volume}</span>
         <span class="link-btn small">${t.viewVolume} →</span>
       </button>
