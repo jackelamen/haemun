@@ -453,8 +453,18 @@ function aboutHtml(t) {
       <div class="about-lede">${esc(t.aboutLede)}</div>
     </div>
   </section>
+  <section class="name-sec" aria-label="${t.nameKicker}">
+    <div class="cap muted">${t.nameKicker}</div>
+    <div class="name-grid">${t.nameDefs.map(([glyph, read, meaning, line], i) => `<div class="name-def${i === 1 ? ' is-sea' : ''}">
+      <div class="name-glyph">${glyph}</div>
+      <div class="cap name-read">${read}</div>
+      <div class="name-mean">${meaning}</div>
+      <p class="name-line">${line}</p>
+    </div>`).join('')}</div>
+    <p class="name-sum">${t.nameLine}</p>
+  </section>
   <section class="about-story">
-    <div class="about-panel"><img class="about-mark" src="assets/haemun-mark-color.png" alt="Haemun emblem: a gate roof over the sea between two mountains" loading="lazy"><span class="cap about-cap">海門 · 해문 · SEA GATE</span></div>
+    <div class="about-panel"><img class="about-mark" src="assets/haemun-mark-color.png" alt="Haemun emblem: a gate roof over the sea between two mountains" loading="lazy"><span class="cap about-cap">海 SEA · 門 GATE</span></div>
     <div class="about-paras">${t.aboutParas.map((p) => `<p>${esc(p)}</p>`).join('')}</div>
   </section>
   <section class="sec">
