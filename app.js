@@ -38,6 +38,7 @@ function pageHash() {
   if (state.view === 'drop') return '#/volume/' + VOLUME.no;
   if (state.view === 'drops') return '#/volumes';
   if (state.view === 'brands') return '#/brands';
+  if (state.view === 'brand') return '#/brands/' + state.brand;
   return '#/';
 }
 function fromHash() {
@@ -50,7 +51,7 @@ function fromHash() {
   if (a === 'about') return { view: 'about', ...product };
   if (a === 'volume') return { view: 'drop', ...product };
   if (a === 'volumes') return { view: 'drops', ...product };
-  if (a === 'brands') return { view: 'brands', ...product };
+  if (a === 'brands') return b ? { view: 'brand', brand: b, ...product } : { view: 'brands', ...product };
   return { view: 'home', ...product };
 }
 let productPushed = false;
@@ -263,7 +264,7 @@ function header(t) {
   ${state.b2b ? `<div class="tradebar"><span>${t.tradeNote}</span><span class="muted2">FOB INCHEON · DDP SINGAPORE</span></div>` : ''}`;
 }
 function navStyle(view) {
-  const active = view === state.view || view === '__b2b' && state.b2b || view === '__lang';
+  const active = view === state.view || (view === 'brands' && state.view === 'brand') || view === '__b2b' && state.b2b || view === '__lang';
   return active ? 'color:#0B0B0C;text-decoration:underline;text-underline-offset:8px' : 'color:#7A7A78';
 }
 function cartCount() { return Object.keys(state.cart).filter(findProduct).reduce((a, id) => a + state.cart[id], 0); }
@@ -848,32 +849,36 @@ function aboutHtml(t) {
   </section>`;
 }
 
-// Brands we carry, from WooCommerce's Brands taxonomy.
+// Brands we carry, from WooCommerce's Brands taxonomy. A brand's description
+// is written as plain lines in WooCommerce: the first line is its tagline,
+// lines like "Founded: 2019" become facts, and the rest is its story.
+function brandParts(b) {
+  const facts = [], story = [];
+  b.desc.slice(1).forEach((line) => { const m = line.match(/^([^:]{2,24}):\s+(.+)$/); if (m) facts.push([m[1], m[2]]); else story.push(line); });
+  return { tagline: b.desc[0] || '', facts, story };
+}
+const brandItems = (b) => PRODUCTS.filter((p) => region(p.origin) === b.name);
+const brandImage = (b) => b.image || ((brandItems(b)[0] || {}).photo) || null;
 function brandsHtml(t) {
-  const cards = BRANDS.map((b) => {
-    const items = PRODUCTS.filter((p) => region(p.origin) === b.name);
-    const img = b.image || (items[0] && items[0].photo);
-    return `<article class="br-card">
-      <button class="br-img" data-action="shopBrand" data-name="${esc(b.name)}">${img ? `<img src="${esc(img)}" alt="" loading="lazy">` : `<span class="br-mono">${esc(b.name.slice(0, 1))}</span>`}</button>
-      <div class="br-body">
-        <div class="br-top"><span class="br-name">${esc(b.name)}</span><span class="mono small muted">${t.brPieces(b.count)}</span></div>
-        <p class="br-desc">${b.desc.length ? esc(b.desc.slice(0, 2).join(' ')) : t.brNoDesc}</p>
-        ${items.length ? `<div class="br-thumbs">${items.slice(0, 4).map((p) => `<button class="br-thumb" data-action="openProduct" data-id="${p.id}" aria-label="${esc(p.name)}">${mediaHtml(p, false)}</button>`).join('')}</div>` : ''}
-        <button class="link-btn" data-action="shopBrand" data-name="${esc(b.name)}">${t.brShop(esc(b.name))} →</button>
-      </div>
-    </article>`;
+  const tiles = BRANDS.map((b) => {
+    const img = brandImage(b), { tagline } = brandParts(b);
+    return `<button class="bg-tile" data-action="openBrand" data-slug="${esc(b.slug)}">
+      <span class="bg-img">${img ? `<img src="${esc(img)}" alt="" loading="lazy">` : `<span class="br-mono">${esc(b.name.slice(0, 1))}</span>`}</span>
+      <span class="bg-name">${esc(b.name)}</span>
+      <span class="bg-tag">${tagline ? esc(tagline) : t.brNoDesc}</span>
+      <span class="mono small muted">${t.brPieces(b.count)}</span>
+    </button>`;
   }).join('');
+  const join = `<div class="bg-tile bg-join">
+      <span class="bg-join-in"><span class="cap">${t.brMakerH}</span><span class="bg-join-b">${esc(t.brMakerB)}</span><span class="bg-join-w">${t.abWrite}</span></span>
+    </div>`;
   return `
-  <section class="br-hero">
+  <section class="pg-head">
     <div class="cap muted">HAEMUN / ${t.brands}</div>
-    <div class="br-head">
-      <div><div class="cap br-k">${t.brKicker}</div><h1 class="br-h1">${t.brH}</h1></div>
-      <p class="br-lede">${esc(t.brLede)}</p>
-    </div>
+    <div class="pg-row"><h1 class="pg-h1">${t.brH}</h1><p class="pg-lede">${esc(t.brLede)}</p></div>
   </section>
   <section class="sec-tight">
-    <div class="br-grid">${state.loading ? skeletons(2, '4 / 3') : cards}</div>
-    <p class="br-more">${t.brMore}</p>
+    <div class="bg-grid">${state.loading ? skeletons(4, '4 / 5') : tiles + join}</div>
   </section>
   <section class="ab-join br-cta">
     <div class="ab-join-grid">
@@ -881,6 +886,32 @@ function brandsHtml(t) {
       <div><div class="ab-join-h">${t.brMakerH}</div><p>${esc(t.brMakerB)}</p><div class="ab-join-links"><span class="ab-write">${t.abWrite}</span></div></div>
     </div>
   </section>`;
+}
+// One brand: its story and facts beside a photo, then everything we carry by it.
+function brandHtml(t) {
+  const b = BRANDS.find((x) => x.slug === state.brand);
+  if (!b) return state.loading ? `<section class="pg-head">${skeletons(1, '4 / 3')}</section>` : brandsHtml(t);
+  const { tagline, facts, story } = brandParts(b);
+  const img = brandImage(b), items = brandItems(b);
+  return `
+  <section class="pg-head">
+    <button class="tlink cap" data-action="nav" data-view="brands">← ${t.brands}</button>
+  </section>
+  <section class="bd">
+    <div class="bd-img">${img ? `<img src="${esc(img)}" alt="" loading="lazy">` : ''}</div>
+    <div class="bd-text">
+      <div class="cap muted">${t.brKicker}</div>
+      <h1 class="pg-h1 bd-name">${esc(b.name)}</h1>
+      ${tagline ? `<p class="bd-tag">${esc(tagline)}</p>` : ''}
+      ${story.map((p) => `<p class="bd-p">${esc(p)}</p>`).join('') || `<p class="bd-p">${t.brNoDesc}</p>`}
+      ${facts.length ? `<dl class="bd-facts">${facts.map(([k, v]) => `<div><dt class="cap muted">${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>` : ''}
+      <div class="bd-links"><button class="btn-outline-dark cap" data-action="shopBrand" data-name="${esc(b.name)}">${t.brShop(esc(b.name))} →</button><button class="link-btn" data-action="enableTrade">${t.abTradeCta} →</button></div>
+    </div>
+  </section>
+  ${items.length ? `<section class="sec">
+    ${sechead('01', t.brPiecesBy(esc(b.name)), t.brPieces(items.length))}
+    <div class="shop-grid" style="margin-top:40px">${items.map((p) => cardHtml(p, t, 460, { number: false })).join('')}</div>
+  </section>` : ''}`;
 }
 
 function routeAndFooter(t) {
@@ -990,6 +1021,7 @@ function render() {
   else if (state.view === 'drop') body = dropHtml(t);
   else if (state.view === 'drops') body = dropsArchiveHtml(t);
   else if (state.view === 'brands') body = brandsHtml(t);
+  else if (state.view === 'brand') body = brandHtml(t);
   else if (state.view === 'mall') body = mallHtml(t);
   else if (state.view === 'journal') body = journalHtml(t);
   else if (state.view === 'article') {
@@ -1058,6 +1090,7 @@ document.addEventListener('click', (e) => {
     const done = () => { el.textContent = T[state.lang].edCopied; setTimeout(() => { el.textContent = T[state.lang].edShare; }, 2000); };
     if (navigator.clipboard) navigator.clipboard.writeText(location.href).then(done, done); else done();
   }
+  else if (a === 'openBrand') go({ view: 'brand', brand: el.dataset.slug });
   else if (a === 'shopBrand') go({ view: 'mall', cat: 'all', origin: el.dataset.name });
   else if (a === 'setCat') { go({ view: 'mall', cat: el.dataset.cat, origin: 'all' }); return; }
   else if (a === 'goCat') go({ view: 'mall', cat: el.dataset.cat || 'all', origin: 'all' });

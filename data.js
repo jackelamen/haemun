@@ -427,7 +427,7 @@ Object.assign(T.en, {
   // Brands page
   brands: 'Brands', brKicker: 'The makers', brH: 'The brands we carry',
   brLede: 'Haemun is a gate for Korean makers too good to stay in Korea and too small for an export house. We introduce them here first, then work to put them on shelves across Singapore and Southeast Asia.',
-  brPieces: (n) => (n === 1 ? '1 piece' : `${n} pieces`), brShop: (name) => `Shop ${name}`, brNoDesc: 'Profile coming soon.',
+  brPieces: (n) => (n === 1 ? '1 piece' : `${n} pieces`), brPiecesBy: (name) => `Pieces by ${name}`, brShop: (name) => `Shop ${name}`, brNoDesc: 'Profile coming soon.',
   brMore: 'More makers join with every volume.',
   brStockH: 'Want one of these brands in your store?', brStockB: 'Retailers, clinics and distributors can see wholesale tiers, minimum orders and compliance dossiers in trade view, or ask us about exclusive regional distribution.',
   brMakerH: 'Are you a Korean maker?', brMakerB: 'We are always looking. Tell us what you make and where you make it.',
@@ -513,7 +513,7 @@ Object.assign(T.ko, {
   abBrandsCta: '취급 브랜드 보기', abTradeCta: '트레이드 보기로 전환', abWrite: '[EMAIL]로 연락 주세요',
   brands: '브랜드', brKicker: '메이커', brH: '해문이 소개하는 브랜드',
   brLede: '해문은 한국에만 머물기엔 너무 좋고, 수출 회사와 일하기엔 규모가 작은 메이커를 위한 문입니다. 먼저 이곳에서 소개하고, 싱가포르와 동남아시아의 매장 진열대에 오르도록 돕습니다.',
-  brPieces: (n) => `${n}개 제품`, brShop: (name) => `${name} 쇼핑하기`, brNoDesc: '소개가 곧 업데이트됩니다.',
+  brPieces: (n) => `${n}개 제품`, brPiecesBy: (name) => `${name}의 제품`, brShop: (name) => `${name} 쇼핑하기`, brNoDesc: '소개가 곧 업데이트됩니다.',
   brMore: '호가 나올 때마다 새로운 메이커가 합류합니다.',
   brStockH: '이 브랜드를 매장에 들이고 싶으신가요?', brStockB: '리테일러, 클리닉, 유통사는 트레이드 보기에서 도매가, 최소 주문 수량, 규정 준수 자료를 확인하거나 지역 독점 유통을 문의할 수 있습니다.',
   brMakerH: '한국 메이커이신가요?', brMakerB: '언제나 찾고 있습니다. 무엇을 어디서 만드는지 알려 주세요.',
