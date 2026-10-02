@@ -242,16 +242,6 @@ function sechead(n, title, sub, btnAction, btnLabel) {
   </div>`;
 }
 
-function postCard(j, t, h, big = false) {
-  const look = postLook(j);
-  return `<button class="post-card" data-action="openArticle" data-id="${j.id}">
-    <span class="post-img" style="aspect-ratio:4 / 3;background:${look.bg}">${mediaHtml(look, false)}</span>
-    <span class="cap post-meta"><span class="flex-c">${dotHtml(CAT_COLOR[j.cat] || '#C1272D')}${t.cats[j.cat]}</span><span>${j.date}</span><span>${j.read}</span></span>
-    <span class="post-title" style="font-size:${big ? '40px' : '20px'};font-weight:${big ? 300 : 500}">${esc(j.title[state.lang])}</span>
-    <span class="post-dek">${esc(j.dek[state.lang])}</span>
-  </button>`;
-}
-
 function header(t) {
   const nav = (view, label) => `<button class="tlink" data-action="nav" data-view="${view}" style="${navStyle(view)}">${label}</button>`;
   return `
@@ -261,7 +251,7 @@ function header(t) {
       <button class="tlink nav-vol" data-action="nav" data-view="drop" style="${navStyle('drop')}">${t.volume}<span class="stamp stamp-sm">${t.now}</span></button>${nav('mall', t.shopAll)}${nav('brands', t.brands)}${nav('journal', t.journal)}${nav('about', t.about)}
     </nav>
     <button class="logo" data-action="nav" data-view="home">
-      <img class="logo-mark on-light" src="assets/haemun-mark.png" alt="" width="40" height="40"><img class="logo-word on-light" src="assets/haemun-wordmark.png" alt="Haemun" width="92" height="17"><img class="logo-mark on-dark" src="assets/haemun-mark-white.png" alt="" width="40" height="40"><img class="logo-word on-dark" src="assets/haemun-wordmark-white.png" alt="" width="92" height="17">
+      <img class="logo-mark logo-seal" src="assets/haemun-mark-seal.png" alt="" width="40" height="40"><img class="logo-word on-light" src="assets/haemun-wordmark.png" alt="Haemun" width="92" height="17"><img class="logo-word on-dark" src="assets/haemun-wordmark-white.png" alt="" width="92" height="17">
     </button>
     <div class="htools">
       <button class="tlink" data-action="toggleTrade" style="${navStyle(state.b2b ? '__b2b' : '')}">${t.trade}</button>
@@ -442,6 +432,16 @@ function checkSail() {
   setTimeout(() => line.style.setProperty('--at', cdAt), 30);
 }
 window.addEventListener('scroll', checkSail, { passive: true });
+
+// Article reading progress.
+function syncProgress() {
+  const bar = document.getElementById('ma-bar'), body = document.getElementById('ma-body');
+  if (!bar || !body) return;
+  const r = body.getBoundingClientRect();
+  const p = Math.min(1, Math.max(0, (window.innerHeight - r.top) / (r.height + window.innerHeight * 0.4)));
+  bar.style.transform = `scaleX(${p.toFixed(3)})`;
+}
+window.addEventListener('scroll', syncProgress, { passive: true });
 
 function catTilesHtml(t) {
   return CATS.map((c) => `<button class="cat-tile" data-action="goCat" data-cat="${c}">
@@ -686,60 +686,103 @@ function filterHtml(t) {
   </div>`;
 }
 
+// Editorial: laid out like a magazine issue. Masthead and sections, a cover
+// story, a contents page, a feature spread, then the rest of the issue.
+const ED_SECTIONS = CATS.concat('house');
+const edSection = (t, c) => t.cats[c] || t.cats.house;
+function edMeta(t, j, withBy) {
+  return `<span class="cap ed-meta">${withBy ? `<span>${t.edBy} ${esc(j.author)}</span>` : ''}<span>${j.date}</span><span>${j.read}</span></span>`;
+}
+function edCard(t, j, size) {
+  const look = postLook(j);
+  return `<button class="ed-card ed-${size}" data-action="openArticle" data-id="${j.id}">
+    <span class="ed-img" style="background:${look.bg}">${mediaHtml(look, false)}</span>
+    <span class="cap ed-kick">${edSection(t, j.cat)}</span>
+    <span class="ed-title">${esc(j.title[state.lang])}</span>
+    <span class="ed-dek">${esc(j.dek[state.lang])}</span>
+    ${edMeta(t, j, false)}
+  </button>`;
+}
 function journalHtml(t) {
-  const jposts = POSTS.filter((j) => state.jcat === 'all' || j.cat === state.jcat);
-  const jFilters = ['all'].concat(CATS).map((c) => `<button class="tlink" data-action="setJcat" data-jcat="${c}" style="${state.jcat === c ? 'color:#0B0B0C;text-decoration:underline' : 'color:#7A7A78'}">${c === 'all' ? t.all : t.cats[c]}</button>`).join('');
-  const featured = jposts[0];
-  const rest = jposts.slice(1);
-  const featuredHtml = featured ? `
-  <section class="featured">
-    <button class="feat-img" style="background:${postLook(featured).bg}" data-action="openArticle" data-id="${featured.id}">${mediaHtml(postLook(featured), false)}</button>
-    <div class="feat-text">
-      <div class="cap flex-c" style="gap:14px;color:#7A7A78"><span style="color:#C1272D">${t.featuredLabel}</span><span>${t.cats[featured.cat]}</span><span>${featured.date}</span></div>
-      <div class="feat-title">${esc(featured.title[state.lang])}</div>
-      <p class="feat-dek">${esc(featured.dek[state.lang])}</p>
-      <button class="btn-outline-dark cap" data-action="openArticle" data-id="${featured.id}">${t.readStory} · ${featured.read}</button>
-    </div>
-  </section>` : '';
+  const posts = POSTS.filter((j) => state.jcat === 'all' || j.cat === state.jcat);
+  const season = VOLUME.season[state.lang] || VOLUME.season.en;
+  const sections = ['all'].concat(ED_SECTIONS.filter((c) => POSTS.some((j) => j.cat === c))).map((c) => {
+    const n = c === 'all' ? POSTS.length : POSTS.filter((j) => j.cat === c).length;
+    return `<button class="ed-sec${state.jcat === c ? ' on' : ''}" data-action="setJcat" data-jcat="${c}" aria-pressed="${state.jcat === c}"><span>${c === 'all' ? t.all : edSection(t, c)}</span><span class="ed-sec-n">${String(n).padStart(2, '0')}</span></button>`;
+  }).join('');
+  const [cover, a, b, ...rest] = posts;
+  const coverLook = cover && postLook(cover);
+  const coverHtml = cover ? `<button class="ed-cover" data-action="openArticle" data-id="${cover.id}">
+      <span class="ed-cover-img" style="background:${coverLook.bg}">${mediaHtml(coverLook, false)}</span>
+      <span class="ed-cover-copy">
+        <span class="cap ed-cover-kick">${t.edCover} · ${edSection(t, cover.cat)}</span>
+        <span class="ed-cover-title">${esc(cover.title[state.lang])}</span>
+        <span class="ed-cover-dek">${esc(cover.dek[state.lang])}</span>
+        ${edMeta(t, cover, true)}
+      </span>
+    </button>` : '';
+  const contents = posts.length > 1 ? `<section class="ed-contents">
+      <div class="ed-contents-h"><div class="cap muted">${t.edContents}</div><div class="ed-contents-t">${season}</div></div>
+      <ol class="ed-toc">${posts.map((j, i) => `<li><button data-action="openArticle" data-id="${j.id}">
+        <span class="ed-toc-n mono">${String(i + 1).padStart(2, '0')}</span>
+        <span class="ed-toc-t">${esc(j.title[state.lang])}</span>
+        <span class="ed-toc-dots" aria-hidden="true"></span>
+        <span class="cap ed-toc-s">${edSection(t, j.cat)} · ${j.read}</span>
+      </button></li>`).join('')}</ol>
+    </section>` : '';
+  const spread = a ? `<section class="ed-spread">${edCard(t, a, 'lead')}${b ? edCard(t, b, 'side') : ''}</section>` : '';
+  const more = rest.length ? `<section class="ed-more">${rest.map((j) => edCard(t, j, 'std')).join('')}</section>` : '';
   return `
-  <section class="sec-tight">
-    <div class="cap muted">HAEMUN / ${t.journal}</div>
-    <div class="shop-head journal-head">
-      <div class="flex-b" style="align-items:baseline;gap:16px"><span class="shop-title">${t.journal}</span><span class="muted">${t.jIntro}</span></div>
-      <div class="sort-row">${jFilters}</div>
-    </div>
+  <section class="ed-mast">
+    <div class="ed-run cap"><span>Haemun ${t.journal}</span><span>${season} · ${t.volume}</span><span>${t.edStories(POSTS.length)}</span></div>
+    <h1 class="ed-h1">${t.journal}</h1>
+    <div class="ed-under"><p class="ed-tag">${t.jIntro}</p><nav class="ed-secs" aria-label="${t.category}">${sections}</nav></div>
   </section>
-  ${featuredHtml}
-  <section class="sec-tight" style="margin-top:96px">
-    <div class="j-grid">${rest.map((j) => postCard(j, t, 340)).join('')}</div>
-  </section>`;
+  ${posts.length ? coverHtml + contents + spread + more : `<p class="ed-empty">${t.none}</p>`}`;
 }
 
 function articleHtml(t, post) {
   const pr = post.product ? findProduct(post.product) : null;
   const art = postLook(post);
-  const productBlock = pr ? `
-  <div class="art-product-wrap">
-    <div class="art-product">
-      <span class="art-p-img" style="background:${pr.bg}">${mediaHtml(pr, false)}</span>
-      <div><div class="cap muted">${t.inStory}</div><div style="margin-top:8px;font-size:16px;font-weight:500">${esc(pr.name)}</div><div style="margin-top:4px;font-size:13px;color:#5E5E5B">${sgd(pr.price)}</div></div>
+  const i = POSTS.indexOf(post);
+  const next = POSTS.length > 1 ? POSTS[(i + 1) % POSTS.length] : null;
+  const [first, ...paras] = post.paras;
+  const productBlock = pr ? `<aside class="ma-product">
+      <span class="ma-p-img" style="background:${pr.bg}">${mediaHtml(pr, false)}</span>
+      <div><div class="cap muted">${t.inStory}</div><div class="ma-p-name">${esc(pr.name)}</div><div class="ma-p-price">${viewOf(pr, t).priceLabel}</div></div>
       <button class="btn-outline-dark cap" data-action="openProduct" data-id="${pr.id}">${t.view} →</button>
-    </div>
-  </div>` : '';
+    </aside>` : '';
+  const nextLook = next && postLook(next);
+  const nextHtml = next ? `<section class="ma-next">
+      <div class="cap muted">${t.edNext}</div>
+      <button class="ma-next-card" data-action="openArticle" data-id="${next.id}">
+        <span class="ma-next-img" style="background:${nextLook.bg}">${mediaHtml(nextLook, false)}</span>
+        <span class="ma-next-copy"><span class="cap ed-kick">${edSection(t, next.cat)}</span><span class="ma-next-title">${esc(next.title[state.lang])}</span><span class="ed-dek">${esc(next.dek[state.lang])}</span><span class="link-btn">${t.readStory} →</span></span>
+      </button>
+    </section>` : '';
   return `
-  <article class="art">
-    <button class="tlink cap" data-action="nav" data-view="journal">← ${t.journal}</button>
-    <div class="art-head"><div>
-      <div class="cap flex-c art-meta"><span class="flex-c">${dotHtml(CAT_COLOR[post.cat] || '#C1272D')}${t.cats[post.cat]}</span><span>${post.date}</span><span>${post.read}</span></div>
-      <h1 class="art-title">${esc(post.title[state.lang])}</h1>
-      <p class="art-dek">${esc(post.dek[state.lang])}</p>
-    </div></div>
-    <div class="art-hero" style="background:${art.bg}">${mediaHtml(art, false)}</div>
-    <div class="art-body">
-      <div class="cap art-byline">${t.by}<br><span style="color:#0B0B0C">${esc(post.author)}</span></div>
-      <div class="art-text">${post.paras.map((p) => `<p>${esc(p)}</p>`).join('')}</div>
+  <div class="ma-progress" aria-hidden="true"><span id="ma-bar"></span></div>
+  <article class="ma">
+    <header class="ma-hero">
+      <span class="ma-hero-img" style="background:${art.bg}">${mediaHtml(art, false)}</span>
+      <div class="ma-hero-copy">
+        <button class="cap ma-back" data-action="nav" data-view="journal">← ${t.journal}</button>
+        <div class="cap ma-kick">${edSection(t, post.cat)}</div>
+        <h1 class="ma-title">${esc(post.title[state.lang])}</h1>
+        <p class="ma-dek">${esc(post.dek[state.lang])}</p>
+      </div>
+    </header>
+    <div class="ma-bar">
+      ${edMeta(t, post, true)}
+      <button class="cap ma-share" data-action="copyLink">${t.edShare}</button>
     </div>
-    ${productBlock}
+    <div class="ma-body" id="ma-body">
+      ${first ? `<p class="ma-lede">${esc(first)}</p>` : ''}
+      ${paras.map((p) => `<p>${esc(p)}</p>`).join('')}
+      ${productBlock}
+      <div class="ma-end" aria-hidden="true">■</div>
+    </div>
+    ${nextHtml}
   </article>`;
 }
 
@@ -973,6 +1016,7 @@ function render() {
   playIntro();
   syncHeader();
   placeCountdown();
+  syncProgress();
 }
 
 
@@ -1011,6 +1055,10 @@ document.addEventListener('click', (e) => {
   else if (a === 'nav-journal') go({ view: 'journal', postId: null });
   else if (a === 'nav-about') go({ view: 'about' });
   else if (a === 'nav-drops') go({ view: 'drops' });
+  else if (a === 'copyLink') {
+    const done = () => { el.textContent = T[state.lang].edCopied; setTimeout(() => { el.textContent = T[state.lang].edShare; }, 2000); };
+    if (navigator.clipboard) navigator.clipboard.writeText(location.href).then(done, done); else done();
+  }
   else if (a === 'shopBrand') go({ view: 'mall', cat: 'all', origin: el.dataset.name });
   else if (a === 'setCat') { go({ view: 'mall', cat: el.dataset.cat, origin: 'all' }); return; }
   else if (a === 'goCat') go({ view: 'mall', cat: el.dataset.cat || 'all', origin: 'all' });

@@ -387,6 +387,8 @@ const T = {
 
 // Landing page (volume hero, cover band, "Six ways in").
 Object.assign(T.en, {
+  edCover: 'Cover story', edContents: 'In this issue', edStories: (n) => (n === 1 ? '1 story' : `${n} stories`), edBy: 'By',
+  edNext: 'Next story', edShare: 'Copy link', edCopied: 'Link copied',
   // Countdown band (home)
   cdKicker: 'Next volume', cdDays: (n) => (n === 1 ? 'day' : 'days'), cdUntil: (vol, season, date) => `until Volume ${vol}${season ? ' · ' + season : ''} opens on ${date}`,
   cdFrom: (vol, date) => `Volume ${vol} opened ${date}`, cdTo: (vol, date) => `Volume ${vol} arrives ${date}`,
@@ -475,6 +477,8 @@ Object.assign(T.en, {
   },
 });
 Object.assign(T.ko, {
+  edCover: '커버 스토리', edContents: '이번 호의 이야기', edStories: (n) => `이야기 ${n}편`, edBy: '글',
+  edNext: '다음 이야기', edShare: '링크 복사', edCopied: '링크가 복사되었습니다',
   cdKicker: '다음 호', cdDays: () => '일', cdUntil: (vol, season, date) => `제${Number(vol)}호${season ? ' · ' + season : ''} 공개까지 (${date})`,
   cdFrom: (vol, date) => `제${Number(vol)}호 ${date} 공개`, cdTo: (vol, date) => `제${Number(vol)}호 ${date} 도착`,
   cdToday: (d, n) => `오늘 · ${n}일 중 ${d}일째`, cdSee: '이번 호 보기',
