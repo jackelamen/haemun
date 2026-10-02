@@ -256,6 +256,26 @@ function miniCard(p, t) {
     <span class="mini-name">${esc(p.name)}</span><span class="muted">${viewOf(p, t).priceLabel}</span>
   </button>`;
 }
+// Volume 01 opened in October 2026; one volume per month after that.
+const VOL1 = { year: 2026, month: 9 };
+function nextDropInfo(now = new Date()) {
+  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const vol = (next.getFullYear() - VOL1.year) * 12 + (next.getMonth() - VOL1.month) + 1;
+  const days = Math.ceil((next - now) / 86400000);
+  return { vol: String(vol).padStart(2, '0'), next, days };
+}
+function dropsHtml(t) {
+  const d = nextDropInfo();
+  const date = d.next.toLocaleDateString(state.lang === 'ko' ? 'ko-KR' : 'en-SG', { day: 'numeric', month: 'long' });
+  return `<div class="drops">
+    <div class="drops-head">
+      <div class="cap muted">${t.dropsKicker}</div>
+      <div class="drops-next"><span class="drops-dot"></span>${t.nextDrop(d.vol, date)} <span class="muted">· ${t.daysLeft(d.days)}</span></div>
+    </div>
+    <ol class="drops-steps">${t.drops.map(([n, h, b]) => `<li><span class="mono small drops-n">${n}</span><div class="drops-h">${h}</div><p>${b}</p></li>`).join('')}</ol>
+    <button class="link-btn small" data-action="openArticle" data-id="j6">${t.dropNotes} →</button>
+  </div>`;
+}
 function skeletons(n, ratio) { return Array.from({ length: n }, () => `<div class="skel"><div class="skel-img" style="aspect-ratio:${ratio}"></div><div class="skel-line"></div><div class="skel-line short"></div></div>`).join(''); }
 
 function homeHtml(t) {
@@ -286,7 +306,7 @@ function homeHtml(t) {
       <figcaption class="cap-row"><span>${t.cap1}</span><span class="muted">Seoul, 2026</span></figcaption>
     </figure>
     <div class="hero-panel">
-      <div class="hero-top"><span>VOLUME 01</span><span>AUTUMN 2026</span></div>
+      <div class="hero-top"><span>VOLUME 01</span><span>OCTOBER 2026</span></div>
       <div>
         <div class="cap" style="color:#C1272D">${t.volTag}</div>
         <div class="hero-h1">${esc(t.h1)}</div>
@@ -302,6 +322,7 @@ function homeHtml(t) {
   <section class="sec">
     ${sechead('01', t.volTitle, t.volSub, 'goCat', t.shopAll)}
     <div class="grid3" id="volume" style="margin-top:40px">${state.loading ? skeletons(3, '4 / 5') : volProducts.map((p) => cardHtml(p, t, 600)).join('')}</div>
+    ${dropsHtml(t)}
   </section>
 
   <section class="sec">
