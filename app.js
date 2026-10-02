@@ -135,8 +135,8 @@ function shapeSvg(p, label = true) {
   else if (shape === 'bowl') inner = `<path d="M86 244 L214 244 L198 298 L102 298 Z" fill="${p.fill}"></path><path d="M86 244 L214 244 L198 298 L102 298 Z" fill="url(#hmSheen)"></path><ellipse cx="150" cy="244" rx="64" ry="9" fill="#FFFFFF" fill-opacity=".35"></ellipse>`;
   else if (shape === 'pouch') inner = `<path d="M104 162 L196 162 L200 290 Q 150 304 100 290 Z" fill="${p.fill}"></path><path d="M104 162 L196 162 L200 290 Q 150 304 100 290 Z" fill="url(#hmSheen)"></path><rect x="104" y="162" width="92" height="10" fill="#0B0B0C" fill-opacity=".3"></rect><rect x="122" y="204" width="56" height="50" fill="#F7F6F2"></rect>${L(232,6,2)}`;
   else if (shape === 'card') inner = `<rect x="78" y="128" width="144" height="170" fill="url(#hmPorc)"></rect><rect x="78" y="128" width="144" height="36" fill="${p.fill}"></rect><text x="92" y="151" font-family="IBM Plex Mono" font-size="7" letter-spacing="2" fill="#FFFFFF">PASSAGE</text><text x="92" y="196" font-family="IBM Plex Mono" font-size="6" letter-spacing="1.5" fill="#5E5E5B">SIN → ICN</text><line x1="92" y1="210" x2="208" y2="210" stroke="#0B0B0C" stroke-opacity=".2" stroke-dasharray="3 3"></line><text x="92" y="232" font-family="IBM Plex Sans KR" font-weight="600" font-size="9" fill="#0B0B0C">HAEMUN</text><rect x="186" y="256" width="22" height="22" fill="#C1272D"></rect>`;
-  return `<svg viewBox="0 0 300 400" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
-    <rect x="0" y="0" width="300" height="400" fill="url(#hmLight)"></rect><rect x="0" y="292" width="300" height="108" fill="url(#hmFloor)"></rect><ellipse cx="150" cy="299" rx="82" ry="9" fill="url(#hmShadow)"></ellipse>${inner}</svg>`;
+  return `<svg viewBox="0 0 300 400" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="overflow:visible">
+    <rect x="-900" y="-400" width="2100" height="1200" fill="url(#hmLight)"></rect><rect x="-900" y="292" width="2100" height="700" fill="url(#hmFloor)"></rect><ellipse cx="150" cy="299" rx="82" ry="9" fill="url(#hmShadow)"></ellipse>${inner}</svg>`;
 }
 
 // Real uploaded photo wins over the drawn placeholder illustration.
@@ -256,21 +256,24 @@ function miniCard(p, t) {
     <span class="mini-name">${esc(p.name)}</span><span class="muted">${viewOf(p, t).priceLabel}</span>
   </button>`;
 }
-// Volume 01 opened in October 2026; one volume per month after that.
-const VOL1 = { year: 2026, month: 9 };
+// Next drop = the next month listed in DROP_MONTHS (data.js). Volume
+// numbers count every drop since Volume 01.
 function nextDropInfo(now = new Date()) {
-  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const vol = (next.getFullYear() - VOL1.year) * 12 + (next.getMonth() - VOL1.month) + 1;
+  let next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  while (!DROP_MONTHS.includes(next.getMonth())) next = new Date(next.getFullYear(), next.getMonth() + 1, 1);
+  let vol = 0;
+  for (let d = new Date(VOL1.year, VOL1.month, 1); d <= next; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) if (DROP_MONTHS.includes(d.getMonth())) vol++;
   const days = Math.ceil((next - now) / 86400000);
   return { vol: String(vol).padStart(2, '0'), next, days };
 }
 function dropsHtml(t) {
   const d = nextDropInfo();
   const date = d.next.toLocaleDateString(state.lang === 'ko' ? 'ko-KR' : 'en-SG', { day: 'numeric', month: 'long' });
+  const label = DROP_MONTHS.length === 12 ? '' : t.seasons[d.next.getMonth()];
   return `<div class="drops">
     <div class="drops-head">
       <div class="cap muted">${t.dropsKicker}</div>
-      <div class="drops-next"><span class="drops-dot"></span>${t.nextDrop(d.vol, date)} <span class="muted">· ${t.daysLeft(d.days)}</span></div>
+      <div class="drops-next"><span class="drops-dot"></span>${t.nextDrop(d.vol, label, date)} <span class="muted">· ${t.daysLeft(d.days)}</span></div>
     </div>
     <ol class="drops-steps">${t.drops.map(([n, h, b]) => `<li><span class="mono small drops-n">${n}</span><div class="drops-h">${h}</div><p>${b}</p></li>`).join('')}</ol>
     <button class="link-btn small" data-action="openArticle" data-id="j6">${t.dropNotes} →</button>
@@ -306,7 +309,7 @@ function homeHtml(t) {
       <figcaption class="cap-row"><span>${t.cap1}</span><span class="muted">Seoul, 2026</span></figcaption>
     </figure>
     <div class="hero-panel">
-      <div class="hero-top"><span>VOLUME 01</span><span>OCTOBER 2026</span></div>
+      <div class="hero-top"><span>VOLUME 01</span><span>AUTUMN 2026</span></div>
       <div>
         <div class="cap" style="color:#C1272D">${t.volTag}</div>
         <div class="hero-h1">${esc(t.h1)}</div>
@@ -415,14 +418,14 @@ function journalHtml(t) {
   return `
   <section class="sec-tight">
     <div class="cap muted">HAEMUN / ${t.journal}</div>
-    <div class="shop-head">
+    <div class="shop-head journal-head">
       <div class="flex-b" style="align-items:baseline;gap:16px"><span class="shop-title">${t.journal}</span><span class="muted">${t.jIntro}</span></div>
       <div class="sort-row">${jFilters}</div>
     </div>
   </section>
   ${featuredHtml}
   <section class="sec-tight" style="margin-top:96px">
-    <div class="grid3" style="padding-top:24px;border-top:1px solid #E6E6E3">${rest.map((j) => postCard(j, t, 340)).join('')}</div>
+    <div class="j-grid">${rest.map((j) => postCard(j, t, 340)).join('')}</div>
   </section>`;
 }
 
@@ -440,11 +443,11 @@ function articleHtml(t, post) {
   return `
   <article class="art">
     <button class="tlink cap" data-action="nav" data-view="journal">← ${t.journal}</button>
-    <div class="art-head">
-      <div class="cap flex-c" style="justify-content:center;gap:16px;color:#7A7A78"><span class="flex-c">${dotHtml(CAT_COLOR[post.cat] || '#C1272D')}${t.cats[post.cat]}</span><span>${post.date}</span><span>${post.read}</span></div>
+    <div class="art-head"><div>
+      <div class="cap flex-c art-meta"><span class="flex-c">${dotHtml(CAT_COLOR[post.cat] || '#C1272D')}${t.cats[post.cat]}</span><span>${post.date}</span><span>${post.read}</span></div>
       <h1 class="art-title">${esc(post.title[state.lang])}</h1>
       <p class="art-dek">${esc(post.dek[state.lang])}</p>
-    </div>
+    </div></div>
     <div class="art-hero" style="background:${art.bg}">${mediaHtml(art, false)}</div>
     <div class="art-body">
       <div class="cap art-byline">${t.by}<br><span style="color:#0B0B0C">${esc(post.author)}</span></div>
@@ -562,9 +565,6 @@ function pdpHtml(t) {
       <h1 class="pdp-name">${esc(raw.name)}</h1>
       <div class="pdp-ko">${esc(raw.ko)}</div>
       <div class="pdp-price-row"><span class="pdp-price">${v.priceLabel}</span><span class="cap muted">${v.priceNote} · ${raw.cat === 'beauty' || raw.cat === 'wellness' ? 'HSA NOTIFIED' : raw.cat === 'pet' ? 'AVS CLEARED' : raw.cat === 'medical' ? 'BY CONSULTATION' : 'MADE IN KOREA'}</span></div>
-      <div class="pdp-tabs">${tabs}</div>
-      <div class="pdp-rows">${state.tab === 'form' && raw.desc && raw.desc.length ? `<div class="pdp-desc">${raw.desc.map((line) => line.startsWith('\u2022') ? `<p class="pdp-li">${esc(line.slice(1).trim())}</p>` : `<p>${esc(line)}</p>`).join('')}</div>` : ''}${rows.map(([k, val]) => `<div class="pdp-row"><span class="mono small muted">${esc(k)}</span><span>${esc(val)}</span></div>`).join('')}</div>
-      ${related.length ? `<div class="pdp-related"><div class="cap muted">${t.related}</div><div class="rel-grid">${related.map((r) => miniCard(r, t)).join('')}</div></div>` : ''}
       <div class="pdp-cta">
         <div class="pdp-cta-row">
           ${qtyBlock}
@@ -572,6 +572,9 @@ function pdpHtml(t) {
         </div>
         <ul class="trust">${t.trust.map((x) => `<li>${x}</li>`).join('')}</ul>
       </div>
+      <div class="pdp-tabs">${tabs}</div>
+      <div class="pdp-rows">${state.tab === 'form' && raw.desc && raw.desc.length ? `<div class="pdp-desc">${raw.desc.map((line) => line.startsWith('\u2022') ? `<p class="pdp-li">${esc(line.slice(1).trim())}</p>` : `<p>${esc(line)}</p>`).join('')}</div>` : ''}${rows.map(([k, val]) => `<div class="pdp-row"><span class="mono small muted">${esc(k)}</span><span>${esc(val)}</span></div>`).join('')}</div>
+      ${related.length ? `<div class="pdp-related"><div class="cap muted">${t.related}</div><div class="rel-grid">${related.map((r) => miniCard(r, t)).join('')}</div></div>` : ''}
     </div>
   </div>`;
 }
