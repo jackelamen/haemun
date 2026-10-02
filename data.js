@@ -32,6 +32,28 @@ const FREE_SHIP = 120;
 const DROP_MONTHS = [2, 5, 8, 11];
 const VOL1 = { year: 2026, month: 8 }; // Volume 01: Autumn 2026
 
+// The current volume, as shown in the landing-page hero. Its products are
+// whichever WooCommerce products carry a tag containing "volume" (currently
+// "Volume 01"). To launch a new volume: tag its products, swap these images,
+// and bump the number and season.
+//   hero.wide / hero.tall  stills for desktop (16:9) and phone (3:4)
+//   hero.video / videoTall  muted ambient loop (MP4); leave null until it exists
+//   hero.film               full film with sound, opened by "Watch the film"
+//   starts                  optional "Start here if..." line per product id;
+//                           otherwise the category's line in T.startCat is used
+const VOLUME = {
+  no: '01',
+  season: { en: 'Autumn 2026', ko: '2026 가을' },
+  hero: {
+    wide: 'assets/volumes/vol-01-hero-wide.jpg',
+    tall: 'assets/volumes/vol-01-hero-tall.jpg',
+    video: null, videoTall: null, film: null, filmLength: '',
+  },
+  starts: {
+    wc34: { en: 'Start here if you want a ritual, not a routine.', ko: '루틴이 아닌 의식을 원한다면 여기서 시작하세요.' },
+  },
+};
+
 // Currency reported by the store; drives the price prefix site-wide.
 let STORE_CURRENCY = 'SGD';
 // 'live' once WooCommerce answers, 'failed' if it can't be reached.
@@ -324,6 +346,52 @@ const T = {
     empty: '장바구니가 비어 있습니다.', subtotal: '소계', gst: '싱가포르 GST 9% 포함', checkout: 'PayNow / 카드 결제',
     pr: [['37.56N', '서울', '직접 방문해 고릅니다. 스무 곳 중 한 곳 미만만 입점합니다.'], ['4,630 KM', '바다 위', '배치 기록과 콜드체인 데이터가 함께 이동합니다.'], ['1.35N', '싱가포르', '카테고리별 규정 준수를 마친 뒤 등록됩니다.']] },
 };
+
+// Landing page (volume hero, cover band, "Six ways in").
+Object.assign(T.en, {
+  volTitle: 'Six ways in', volSub: 'One piece from each category, chosen in person. Pick the one that sounds like you.',
+  heroKicker: (vol, season) => `Volume ${vol} · ${season} · Open now`,
+  heroH: 'Start\nwith six.',
+  heroDek: 'New to Korean makers? We went to Korea and chose one piece from each thing it does best. This is where to begin.',
+  heroAlt: 'The six pieces of this volume on a walnut table, lit by low sun through a hanok door',
+  curiousQ: 'What are you curious about?',
+  curious: { beauty: 'Skin', fashion: 'Style', wellness: 'Wellness', pet: 'My pet', medical: 'A trip to Seoul' },
+  seeSix: (n) => (n === 6 ? 'See all six' : `See all ${n}`), shopEverything: (n) => `Shop everything · ${n}`,
+  watchFilm: 'Watch the film',
+  bandJournal: 'Journal · Latest', bandNext: (vol) => `Days to Volume ${vol}`,
+  bandNextH: (season, date) => `${season} opens ${date}. How drops work \u2192`,
+  bandTrade: 'Trade · B2B', bandTradeH: 'Stocking Haemun? See wholesale pricing \u2192',
+  crossing: 'The crossing', crossNote: 'Every volume crosses by sea', seoul: 'Seoul', atSea: 'At sea', singapore: 'Singapore',
+  startCat: {
+    beauty: "Start here if you're new to Korean skincare.",
+    fashion: "Start here if you want one piece you'll carry every day.",
+    wellness: "Start here if you've heard of ginseng but never tried it.",
+    pet: "Start here if your dog's paws take a beating.",
+    medical: "Start here if you've thought about treatment in Seoul.",
+  },
+});
+Object.assign(T.ko, {
+  volTitle: '여섯 가지 입문', volSub: '카테고리마다 하나씩, 직접 고른 제품입니다. 마음에 드는 것부터 시작하세요.',
+  heroKicker: (vol, season) => `제${Number(vol)}호 · ${season} · 지금 공개`,
+  heroH: '여섯 가지로\n시작하기.',
+  heroDek: '한국 메이커가 처음이신가요? 저희가 직접 한국을 찾아, 한국이 가장 잘하는 분야마다 하나씩 골랐습니다. 여기서 시작하세요.',
+  heroAlt: '한옥 문살 사이로 드는 햇빛 아래 호두나무 테이블 위의 이번 호 여섯 가지 제품',
+  curiousQ: '무엇이 궁금하세요?',
+  curious: { beauty: '스킨케어', fashion: '스타일', wellness: '웰니스', pet: '반려동물', medical: '서울 의료 여행' },
+  seeSix: (n) => `${n}가지 모두 보기`, shopEverything: (n) => `전체 상품 · ${n}`,
+  watchFilm: '영상 보기',
+  bandJournal: '저널 · 최신', bandNext: (vol) => `제${Number(vol)}호까지 남은 날`,
+  bandNextH: (season, date) => `${season} 호는 ${date} 공개. 드롭 방식 보기 \u2192`,
+  bandTrade: '트레이드 · B2B', bandTradeH: '해문 입점을 원하시나요? 도매가 보기 \u2192',
+  crossing: '바다를 건너', crossNote: '모든 호는 바다를 건너 옵니다', seoul: '서울', atSea: '바다 위', singapore: '싱가포르',
+  startCat: {
+    beauty: '한국 스킨케어가 처음이라면 여기서 시작하세요.',
+    fashion: '매일 들 하나를 찾는다면 여기서 시작하세요.',
+    wellness: '홍삼을 들어만 보셨다면 여기서 시작하세요.',
+    pet: '반려견 발바닥이 거칠어졌다면 여기서 시작하세요.',
+    medical: '서울에서의 시술을 고민해 보셨다면 여기서 시작하세요.',
+  },
+});
 
 // Kept so journal stories can still draw their illustration after live
 // products replace PRODUCTS.

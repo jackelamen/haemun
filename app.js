@@ -20,7 +20,10 @@ const artFor = (id) => findProduct(id) || MOCK_PRODUCTS.find((p) => p.id === id)
 const postLook = (j) => (j.image ? { photo: j.image, name: j.title.en, bg: j.bg || '#E2E1DD' } : (j.product && artFor(j.product)) || j);
 // Volume shows curated picks; with a live store that has none tagged
 // "volume" yet, fall back to the newest six so the section is never empty.
-const volumePicks = () => { const v = PRODUCTS.filter((p) => p.vol); return v.length ? v : PRODUCTS.slice(0, 6); };
+const volumePicks = () => {
+  const v = PRODUCTS.filter((p) => p.vol);
+  return (v.length ? v : PRODUCTS.slice(0, 6)).slice().sort((x, y) => CATS.indexOf(x.cat) - CATS.indexOf(y.cat) || y.price - x.price);
+};
 
 // Hash routes so Back/Forward and refresh keep the reader where they were.
 function toHash() {
@@ -237,12 +240,12 @@ function header(t) {
   const nav = (view, label) => `<button class="tlink" data-action="nav" data-view="${view}" style="${navStyle(view)}">${label}</button>`;
   return `
   <div class="cap annbar"><span>${t.ann1}</span><span class="sep">·</span><span>${t.ann2}</span></div>
-  <header class="site-header">
+  <header class="site-header${filmHeader() ? ' on-film' : ''}">
     <nav class="hnav">
       ${nav('volume', t.volume)}${nav('mall', t.shopAll)}${nav('journal', t.journal)}${nav('about', t.about)}
     </nav>
     <button class="logo" data-action="nav" data-view="volume">
-      <img class="logo-mark" src="assets/haemun-mark.png" alt="" width="40" height="40"><img class="logo-word" src="assets/haemun-wordmark.png" alt="Haemun" width="92" height="17">
+      <img class="logo-mark on-light" src="assets/haemun-mark.png" alt="" width="40" height="40"><img class="logo-word on-light" src="assets/haemun-wordmark.png" alt="Haemun" width="92" height="17"><img class="logo-mark on-dark" src="assets/haemun-mark-white.png" alt="" width="40" height="40"><img class="logo-word on-dark" src="assets/haemun-wordmark-white.png" alt="" width="92" height="17">
     </button>
     <div class="htools">
       <button class="tlink" data-action="toggleTrade" style="${navStyle(state.b2b ? '__b2b' : '')}">${t.trade}</button>
@@ -294,8 +297,91 @@ function dropsHtml(t) {
 }
 function skeletons(n, ratio) { return Array.from({ length: n }, () => `<div class="skel"><div class="skel-img" style="aspect-ratio:${ratio}"></div><div class="skel-line"></div><div class="skel-line short"></div></div>`).join(''); }
 
+// Landing page: the current volume as a full-bleed cover, then the rest of
+// the issue in a band just below the fold.
+function volHeroHtml(t, vol) {
+  const h = VOLUME.hero;
+  const season = VOLUME.season[state.lang] || VOLUME.season.en;
+  const cats = CATS.filter((c) => vol.some((p) => p.cat === c));
+  const chips = cats.map((c) => {
+    const p = vol.find((x) => x.cat === c);
+    return `<button class="vh-chip" data-action="volPick" data-id="${p.id}">${t.curious[c]}</button>`;
+  }).join('');
+  const media = h.video
+    ? `<video class="vh-media" autoplay muted loop playsinline poster="${h.wide}" aria-label="${esc(t.heroAlt)}">
+        ${h.videoTall ? `<source media="(max-width: 760px)" src="${h.videoTall}" type="video/mp4">` : ''}<source src="${h.video}" type="video/mp4"></video>`
+    : `<picture><source media="(max-width: 760px)" srcset="${h.tall}"><img class="vh-media" src="${h.wide}" alt="${esc(t.heroAlt)}" fetchpriority="high"></picture>`;
+  const film = h.film ? `<a class="vh-play" href="${h.film}" target="_blank" rel="noopener"><span class="vh-play-i" aria-hidden="true"></span><span class="cap">${t.watchFilm}${h.filmLength ? ' · ' + h.filmLength : ''}</span></a>` : '';
+  return `<section class="vhero">
+    <div class="vh-film">${media}</div>
+    ${film}
+    <div class="vh-copy">
+      <div class="cap vh-kicker"><span class="vh-live"></span>${t.heroKicker(VOLUME.no, season)}</div>
+      <h1 class="vh-h1">${esc(t.heroH)}</h1>
+      <p class="vh-dek">${esc(t.heroDek)}</p>
+      ${chips ? `<div class="vh-ask"><div class="cap vh-q">${t.curiousQ}</div><div class="vh-chips">${chips}</div></div>` : ''}
+      <div class="vh-links"><button class="vh-link cap" data-action="scrollHint">${t.seeSix(vol.length)}</button><button class="vh-link dim cap" data-action="goCat" data-cat="all">${t.shopEverything(PRODUCTS.length)}</button></div>
+    </div>
+  </section>`;
+}
+
+function coverBandHtml(t) {
+  const post = POSTS[0];
+  const d = nextDropInfo();
+  const date = d.next.toLocaleDateString(state.lang === 'ko' ? 'ko-KR' : 'en-SG', { day: 'numeric', month: 'long' });
+  const season = DROP_MONTHS.length === 12 ? '' : t.seasons[d.next.getMonth()];
+  const story = post ? `<button class="cb-item" data-action="openArticle" data-id="${post.id}">
+      <span class="cb-th" style="background:${postLook(post).bg}">${mediaHtml(postLook(post), false)}</span>
+      <span><span class="cap muted">${t.bandJournal}</span><span class="cb-h">${esc(post.title[state.lang])}</span></span>
+    </button>` : '';
+  return `<section class="cover-band">
+    ${story}
+    <button class="cb-item" data-action="scrollDrops">
+      <span class="cb-num">${d.days}</span>
+      <span><span class="cap muted">${t.bandNext(d.vol)}</span><span class="cb-h">${t.bandNextH(season || ('Volume ' + d.vol), date)}</span></span>
+    </button>
+    <button class="cb-item" data-action="enableTrade">
+      <span class="cb-num cb-seal">海</span>
+      <span><span class="cap muted">${t.bandTrade}</span><span class="cb-h">${t.bandTradeH}</span></span>
+    </button>
+  </section>`;
+}
+
+// Seoul to Singapore, with a marker for how far through this season we are.
+function crossingHtml(t) {
+  const now = new Date();
+  const d = nextDropInfo(now);
+  let open = new Date(d.next.getFullYear(), d.next.getMonth() - 1, 1);
+  while (!DROP_MONTHS.includes(open.getMonth())) open = new Date(open.getFullYear(), open.getMonth() - 1, 1);
+  const pct = Math.min(96, Math.max(4, Math.round(((now - open) / (d.next - open)) * 100)));
+  return `<section class="crossing">
+    <div class="cr-row"><span class="cap muted">${t.crossing}</span><span class="cap muted">${t.crossNote}</span></div>
+    <div class="cr-route" aria-hidden="true"><span class="cr-done" style="width:${pct}%"></span><span class="cr-end" style="left:0"></span><span class="cr-ship" style="left:${pct}%"></span><span class="cr-end" style="left:100%"></span></div>
+    <div class="cr-row">
+      <div><div class="mono small muted">37.56° N</div><div class="cr-place">${t.seoul}</div></div>
+      <div style="text-align:center"><div class="mono small muted">4,630 KM</div><div class="cr-place">${t.atSea}</div></div>
+      <div style="text-align:right"><div class="mono small muted">1.35° N</div><div class="cr-place">${t.singapore}</div></div>
+    </div>
+  </section>`;
+}
+
+function volCard(p, t, i, n) {
+  const v = viewOf(p, t);
+  const start = (VOLUME.starts[p.id] && (VOLUME.starts[p.id][state.lang] || VOLUME.starts[p.id].en)) || t.startCat[p.cat] || '';
+  return `<article class="vc" id="vc-${p.id}">
+    <button class="vc-img" style="background:${p.bg}" aria-label="${esc(p.name)}" data-action="openProduct" data-id="${p.id}">
+      ${mediaHtml(p)}<span class="cap ov-tl vc-idx">${i + 1} / ${n}</span>
+    </button>
+    <div class="vc-meta"><span class="flex-c">${dotHtml(v.dotColor)}${v.catLabel}${p.origin ? ' · ' + esc(p.origin) : ''}</span><span>${v.priceLabel}</span></div>
+    <button class="vc-name" data-action="openProduct" data-id="${p.id}">${esc(p.name)}</button>
+    ${start ? `<p class="vc-start">${esc(start)}</p>` : ''}
+    <button class="link-btn small" data-action="quick" data-id="${p.id}">${v.quickLabel}</button>
+  </article>`;
+}
+
 function homeHtml(t) {
   const volProducts = volumePicks();
+  const vc = (p, i) => volCard(p, t, i, volProducts.length);
   const catTiles = CATS.map((c, i) => {
     const f = PRODUCTS.find((p) => p.cat === c && p.vol) || PRODUCTS.find((p) => p.cat === c);
     const img = f ? `<span class="cat-img" style="aspect-ratio:3 / 4;background:${f.bg}">${mediaHtml(f, false)}<span class="cap ov-tl">0${i + 1}</span></span>` : `<span class="cat-img" style="aspect-ratio:3 / 4;background:#ECECE9"><span class="cap ov-tl">0${i + 1}</span></span>`;
@@ -307,38 +393,14 @@ function homeHtml(t) {
   }).join('');
   const posts = POSTS.slice(0, 3).map((j) => postCard(j, t, 360)).join('');
   return `
-  <section class="hero">
-    <figure class="hero-img">
-      <div class="jar-wrap">
-        <svg viewBox="0 0 700 760" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
-          <rect x="0" y="0" width="700" height="760" fill="#CFCFCB"/><rect x="0" y="0" width="700" height="760" fill="url(#hmLight)"/>
-          <rect x="0" y="520" width="700" height="240" fill="#BDBDB8"/><rect x="0" y="520" width="700" height="1" fill="#A9A9A4"/>
-          <ellipse cx="350" cy="544" rx="190" ry="16" fill="url(#hmShadow)"/>
-          <path d="M308 278 L392 278 L396 296 C 490 310, 528 390, 520 450 C 512 508, 454 540, 400 544 L300 544 C 246 540, 188 508, 180 450 C 172 390, 210 310, 304 296 Z" fill="url(#hmPorc)"/>
-          <path d="M304 296 C 210 310, 172 390, 180 450 C 188 508, 246 540, 300 544 L 325 544 C 260 520, 220 480, 222 430 C 226 370, 260 320, 320 298 Z" fill="#DDDCD6" fill-opacity=".6"/>
-        </svg>
-        <span class="cap ov-tl">HM / VOL.01 / 000</span>
-      </div>
-      <figcaption class="cap-row"><span>${t.cap1}</span><span class="muted">Seoul, 2026</span></figcaption>
-    </figure>
-    <div class="hero-panel">
-      <div class="hero-top"><span>VOLUME 01</span><span>AUTUMN 2026</span></div>
-      <div>
-        <div class="cap" style="color:#C1272D">${t.volTag}</div>
-        <div class="hero-h1">${esc(t.h1)}</div>
-        <p class="hero-sub">${esc(t.sub)}</p>
-      </div>
-      <div class="hero-btns">
-        <button class="btn-solid cap" data-action="scrollHint">${t.seeVol} ↓</button>
-        <button class="btn-outline cap" data-action="goCat" data-cat="all">${t.enterMall} →</button>
-      </div>
-    </div>
-  </section>
+  ${volHeroHtml(t, volProducts)}
+  ${coverBandHtml(t)}
+  ${crossingHtml(t)}
 
-  <section class="sec">
+  <section class="sec sec-vol">
     ${sechead('01', t.volTitle, t.volSub, 'goCat', t.shopAll)}
-    <div class="grid3" id="volume" style="margin-top:40px">${state.loading ? skeletons(3, '4 / 5') : volProducts.map((p) => cardHtml(p, t, 600)).join('')}</div>
-    ${dropsHtml(t)}
+    <div class="vrail" id="volume">${state.loading ? skeletons(3, '4 / 5') : volProducts.map((p, i) => vc(p, i)).join('')}</div>
+    <div id="drops">${dropsHtml(t)}</div>
   </section>
 
   <section class="sec">
@@ -643,6 +705,8 @@ function render() {
 
   document.documentElement.lang = state.lang;
   document.body.style.overflow = state.activeId || state.cartOpen || state.searchOpen ? 'hidden' : '';
+  const prevVideo = document.querySelector('.vh-media');
+  const videoAt = prevVideo && prevVideo.tagName === 'VIDEO' ? prevVideo.currentTime : 0;
   document.getElementById('app').innerHTML = `
     ${svgDefs()}
     ${header(t)}
@@ -652,6 +716,38 @@ function render() {
     ${state.cartOpen ? cartHtml(t) : ''}
     ${state.searchOpen ? searchHtml(t) : ''}
   `;
+  const video = document.querySelector('video.vh-media');
+  if (video && videoAt) video.currentTime = videoAt;
+  playIntro();
+  syncHeader();
+}
+
+
+// The header sits transparent on the hero (desktop only) until the hero
+// scrolls away.
+function filmHeader() {
+  if (state.view !== 'volume' || window.innerWidth <= 760) return false;
+  return !!document.querySelector('.vhero') && window.scrollY < 40;
+}
+function syncHeader() {
+  const h = document.querySelector('.site-header');
+  if (h) h.classList.toggle('on-film', filmHeader());
+}
+window.addEventListener('scroll', syncHeader, { passive: true });
+window.addEventListener('resize', syncHeader);
+
+// One orchestrated moment: the cover settles in on first view, and never
+// replays on later re-renders.
+let introPlayed = false;
+function playIntro() {
+  if (introPlayed || state.view !== 'volume') return;
+  const media = document.querySelector('.vh-media'), copy = document.querySelector('.vh-copy');
+  if (!media || !copy) return;
+  introPlayed = true;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !media.animate) return;
+  const ease = 'cubic-bezier(.2,.7,.2,1)';
+  media.animate([{ transform: 'scale(1.06)', opacity: 0 }, { transform: 'scale(1)', opacity: 1 }], { duration: 2200, easing: ease });
+  copy.animate([{ transform: 'translateY(18px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 1100, delay: 450, easing: ease, fill: 'backwards' });
 }
 
 document.addEventListener('click', (e) => {
@@ -702,6 +798,16 @@ document.addEventListener('click', (e) => {
   else if (a === 'toggleTrade') setState({ b2b: !state.b2b });
   else if (a === 'enableTrade') { setState({ b2b: true }); window.scrollTo(0, 0); }
   else if (a === 'setLang') setState({ lang: el.dataset.lang });
+  else if (a === 'volPick') {
+    const card = document.getElementById('vc-' + el.dataset.id);
+    if (card) {
+      window.scrollTo({ top: card.getBoundingClientRect().top + scrollY - 140, behavior: 'smooth' });
+      const rail = card.parentElement;
+      rail.scrollTo({ left: card.offsetLeft - parseFloat(getComputedStyle(rail).paddingLeft), behavior: 'smooth' });
+      card.classList.remove('vc-pick'); void card.offsetWidth; card.classList.add('vc-pick');
+    }
+  }
+  else if (a === 'scrollDrops') { const d = document.getElementById('drops'); if (d) window.scrollTo({ top: d.getBoundingClientRect().top + scrollY - 120, behavior: 'smooth' }); }
   else if (a === 'scrollHint') { const v = document.getElementById('volume'); if (v) window.scrollTo({ top: v.getBoundingClientRect().top + scrollY - 120, behavior: 'smooth' }); }
 });
 
