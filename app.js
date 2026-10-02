@@ -1024,7 +1024,7 @@ function render() {
 // The header sits transparent on the hero (desktop only) until the hero
 // scrolls away.
 function filmHeader() {
-  if (state.view !== 'home' || window.innerWidth <= 760) return false;
+  if (state.view !== 'home' || window.innerWidth <= 1100) return false;
   return !!document.querySelector('.vhero') && window.scrollY < 40;
 }
 function syncHeader() {

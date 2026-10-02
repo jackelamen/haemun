@@ -21,6 +21,7 @@ button { font-family: inherit; cursor: pointer; color: inherit; background: none
 .sep { color: #5E5E5B; }
 .site-header { position: sticky; top: 0; z-index: 30; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 76px; padding: 0 40px; background: rgba(255,255,255,0.94); backdrop-filter: blur(12px); border-bottom: 1px solid #E6E6E3; }
 .hnav { display: flex; gap: 30px; }
+.hnav .tlink { white-space: nowrap; }
 .logo { display: flex; align-items: center; gap: 14px; }
 .logo { gap: 12px; }
 .logo-mark { width: 40px; height: 40px; display: block; }
@@ -879,3 +880,13 @@ button:disabled { opacity: .35; cursor: not-allowed; }
 }
 
 .ed-cover-skel { display: block; }
+
+/* Tablet: logo and tools on top, the menu on its own row (as on phones) */
+@media (max-width: 1100px) and (min-width: 761px) {
+  .site-header { grid-template-columns: 1fr auto; grid-template-rows: 64px auto; height: auto; }
+  .logo { grid-row: 1; grid-column: 1; justify-self: start; }
+  .htools { grid-row: 1; grid-column: 2; gap: 18px; }
+  .hnav { grid-row: 2; grid-column: 1 / -1; gap: 28px; min-height: 44px; align-items: center; margin: 0 -40px; padding: 0 40px; border-top: 1px solid #E6E6E3; }
+  .shop-tabs { top: 109px; }
+  .vhero { margin-top: 0; }
+}
