@@ -5,7 +5,8 @@ const CAT_COLOR = { beauty: '#C1272D', fashion: '#0B0B0C', wellness: '#1F3F8C', 
 // own tables, not a plain WordPress post. The Store API is WooCommerce's
 // public, no-auth-required endpoint meant for exactly this (a separate
 // storefront) — no API keys, no ACF setup needed.
-const WC_STORE_API = 'https://mediumblue-crow-786275.hostingersite.com/wp-json/wc/store/v1';
+const WP_SITE = 'https://mediumblue-crow-786275.hostingersite.com';
+const WC_STORE_API = WP_SITE + '/wp-json/wc/store/v1';
 
 const decode = (t) => t.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&#8217;|&rsquo;/g, '\u2019').replace(/&#8211;|&ndash;/g, '\u2013').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'");
 const stripTags = (html) => decode(String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ')).trim();
@@ -213,6 +214,7 @@ const T = {
     footer: 'Korea to Singapore, by sea.', fHouse: 'House', fHelp: 'Help', fShip: 'Shipping', fReturns: 'Returns', fContact: 'Contact',
     shipTo: (n) => `You are ${n} away from complimentary delivery.`, shipDone: 'Complimentary delivery unlocked.', pairs: 'Pairs well with', related: 'You may also like', addShort: 'Add +',
     trust: ['Shipped direct from Korea', 'Compliance handled for Singapore', 'Secure checkout · PayNow and card'],
+    search: 'Search', searchPh: 'Search products, makers, categories', noResults: 'Nothing found. Try a category or maker name.', brand: 'Brand', demoNote: 'These are sample products and can\u2019t be purchased yet.', toCheckout: 'Taking you to secure checkout\u2026',
     empty: 'Your bag is empty.', subtotal: 'Subtotal', gst: 'Prices include 9% Singapore GST', checkout: 'Proceed to PayNow / Card',
     pr: [['37.56N', 'Seoul', 'Chosen in person. Fewer than one in twenty makers make it.'], ['4,630 KM', 'At sea', 'Batch records and cold-chain data travel with every shipment.'], ['1.35N', 'Singapore', 'Cleared and compliant for its category before anything is listed.']] },
   ko: { ann1: '한국에서 싱가포르로 직송', ann2: '모든 카테고리 규정 준수',
@@ -246,6 +248,7 @@ const T = {
     footer: '한국에서 싱가포르로, 바다 건너.', fHouse: '하우스', fHelp: '도움말', fShip: '배송', fReturns: '반품', fContact: '문의',
     shipTo: (n) => `${n} 더 담으면 무료 배송입니다.`, shipDone: '무료 배송이 적용됩니다.', pairs: '함께 쓰기 좋은 제품', related: '이런 제품은 어떠세요', addShort: '담기 +',
     trust: ['한국에서 직접 배송', '싱가포르 규정 준수 완료', 'PayNow · 카드 안전 결제'],
+    search: '검색', searchPh: '제품, 메이커, 카테고리 검색', noResults: '결과가 없습니다. 카테고리나 메이커 이름으로 검색해 보세요.', brand: '브랜드', demoNote: '샘플 제품으로, 아직 구매할 수 없습니다.', toCheckout: '보안 결제 페이지로 이동 중\u2026',
     empty: '장바구니가 비어 있습니다.', subtotal: '소계', gst: '싱가포르 GST 9% 포함', checkout: 'PayNow / 카드 결제',
     pr: [['37.56N', '서울', '직접 방문해 고릅니다. 스무 곳 중 한 곳 미만만 입점합니다.'], ['4,630 KM', '바다 위', '배치 기록과 콜드체인 데이터가 함께 이동합니다.'], ['1.35N', '싱가포르', '카테고리별 규정 준수를 마친 뒤 등록됩니다.']] },
 };

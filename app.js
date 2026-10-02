@@ -21,6 +21,10 @@ const volumePicks = () => { const v = PRODUCTS.filter((p) => p.vol); return v.le
 
 // Hash routes so Back/Forward and refresh keep the reader where they were.
 function toHash() {
+  const base = pageHash();
+  return state.activeId ? base + '?p=' + encodeURIComponent(state.activeId) : base;
+}
+function pageHash() {
   if (state.view === 'mall') return state.cat === 'all' ? '#/shop' : '#/shop/' + state.cat;
   if (state.view === 'journal') return '#/journal';
   if (state.view === 'article') return '#/journal/' + state.postId;
@@ -28,11 +32,27 @@ function toHash() {
   return '#/';
 }
 function fromHash() {
-  const [, a, b] = (location.hash || '#/').replace(/^#/, '').split('/');
-  if (a === 'shop') return { view: 'mall', cat: CATS.includes(b) ? b : 'all' };
-  if (a === 'journal') return b ? { view: 'article', postId: b } : { view: 'journal', postId: null };
-  if (a === 'about') return { view: 'about' };
-  return { view: 'volume' };
+  const [path, query] = (location.hash || '#/').replace(/^#/, '').split('?');
+  const pid = new URLSearchParams(query || '').get('p');
+  const product = { activeId: pid || null, qty: 1, tab: 'form', photoIdx: 0 };
+  const [, a, b] = path.split('/');
+  if (a === 'shop') return { view: 'mall', cat: CATS.includes(b) ? b : 'all', ...product };
+  if (a === 'journal') return b ? { view: 'article', postId: b, ...product } : { view: 'journal', postId: null, ...product };
+  if (a === 'about') return { view: 'about', ...product };
+  return { view: 'volume', ...product };
+}
+let productPushed = false;
+let afterPop = null;
+function openProduct(id, extra = {}) {
+  const wasOpen = !!state.activeId;
+  setState({ activeId: id, qty: 1, tab: 'form', photoIdx: 0, searchOpen: false, cartOpen: false, ...extra });
+  if (wasOpen) history.replaceState(null, '', toHash());
+  else { history.pushState(null, '', toHash()); productPushed = true; }
+}
+function closeProduct(then) {
+  if (productPushed) { productPushed = false; afterPop = then || null; history.back(); return; }
+  setState({ activeId: null, ...(then || {}) });
+  history.replaceState(null, '', toHash());
 }
 
 function setState(patch) { Object.assign(state, patch); render(); }
@@ -45,17 +65,62 @@ function addToCart(id, n) {
   setState({});
 }
 function go(patch) {
-  setState({ activeId: null, cartOpen: false, ...patch });
+  productPushed = false;
+  setState({ activeId: null, cartOpen: false, searchOpen: false, ...patch });
   const h = toHash();
   if (location.hash !== h) history.pushState(null, '', h);
   window.scrollTo(0, 0);
 }
-window.addEventListener('popstate', () => { setState({ activeId: null, cartOpen: false, ...fromHash() }); window.scrollTo(0, 0); });
+window.addEventListener('popstate', () => {
+  const next = fromHash();
+  const samePage = next.view === state.view && next.cat === state.cat && next.postId === state.postId;
+  productPushed = false;
+  setState({ cartOpen: false, searchOpen: false, ...next, ...(afterPop || {}) });
+  afterPop = null;
+  if (!samePage) window.scrollTo(0, 0);
+});
 document.addEventListener('keydown', (e) => {
+  if (e.key === '/' && !state.searchOpen && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); openSearch(); return; }
+  if (e.key === 'Enter' && state.searchOpen) { const first = document.querySelector('#search-results [data-action="openProduct"]'); if (first) first.click(); return; }
   if (e.key !== 'Escape') return;
-  if (state.activeId) setState({ activeId: null });
+  if (state.searchOpen) setState({ searchOpen: false });
+  else if (state.activeId) closeProduct();
   else if (state.cartOpen) setState({ cartOpen: false });
 });
+document.addEventListener('input', (e) => {
+  if (e.target.id !== 'search-input') return;
+  state.q = e.target.value;
+  document.getElementById('search-results').innerHTML = searchResults(T[state.lang]);
+});
+function openSearch() {
+  setState({ searchOpen: true, cartOpen: false });
+  const i = document.getElementById('search-input');
+  if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
+}
+const norm = (x) => String(x || '').toLowerCase();
+function searchResults(t) {
+  const q = norm(state.q).trim();
+  if (!q) return `<div class="s-cats">${CATS.map((c) => `<button class="s-chip" data-action="goCat" data-cat="${c}">${dotHtml(CAT_COLOR[c])}${t.cats[c]}</button>`).join('')}</div>`;
+  const words = q.split(/\s+/);
+  const hits = PRODUCTS.filter((p) => { const hay = norm([p.name, p.ko, p.origin, p.teaser, T.en.cats[p.cat], T.ko.cats[p.cat]].join(' ')); return words.every((w) => hay.includes(w)); }).slice(0, 8);
+  if (!hits.length) return `<p class="s-none">${t.noResults}</p>`;
+  return hits.map((p) => `<button class="s-row" data-action="openProduct" data-id="${p.id}">
+    <span class="s-img" style="background:${p.bg}">${mediaHtml(p, false)}</span>
+    <span class="s-name">${esc(p.name)}<span class="muted">${t.cats[p.cat]}${p.origin ? ' · ' + esc(p.origin) : ''}</span></span>
+    <span class="s-price">${viewOf(p, t).priceLabel}</span></button>`).join('');
+}
+function searchHtml(t) {
+  return `<div class="search-layer" role="dialog" aria-modal="true" aria-label="${t.search}">
+    <button class="search-scrim" data-action="closeSearch" aria-label="${t.close}"></button>
+    <div class="search-panel">
+      <div class="search-bar">
+        <input id="search-input" type="search" autocomplete="off" placeholder="${t.searchPh}" value="${esc(state.q || '')}" aria-label="${t.search}">
+        <button class="tlink" data-action="closeSearch">${t.close} ✕</button>
+      </div>
+      <div id="search-results" class="search-results">${searchResults(t)}</div>
+    </div>
+  </div>`;
+}
 
 function shapeSvg(p, label = true) {
   const L = (y, size, sp) => label ? `<text x="150" y="${y}" text-anchor="middle" font-family="IBM Plex Sans KR" font-weight="600" font-size="${size}" letter-spacing="${sp}" fill="#0B0B0C">HAEMUN</text>` : '';
@@ -76,7 +141,7 @@ function shapeSvg(p, label = true) {
 
 // Real uploaded photo wins over the drawn placeholder illustration.
 function mediaHtml(p, label = true) {
-  if (p.photo) return `<img src="${esc(p.photo)}" alt="${esc(p.name || '')}" style="width:100%;height:100%;object-fit:cover;display:block">`;
+  if (p.photo) return `<img src="${esc(p.photo)}" alt="${esc(p.name || '')}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block">`;
   return shapeSvg(p, label);
 }
 
@@ -164,11 +229,12 @@ function header(t) {
       ${nav('volume', t.volume)}${nav('mall', t.shopAll)}${nav('journal', t.journal)}${nav('about', t.about)}
     </nav>
     <button class="logo" data-action="nav" data-view="volume">
-      <span class="seal">海門</span><span class="wordmark">HAEMUN</span>
+      <img class="logo-mark" src="assets/haemun-mark.png" alt="" width="40" height="40"><img class="logo-word" src="assets/haemun-wordmark.png" alt="Haemun" width="92" height="17">
     </button>
     <div class="htools">
       <button class="tlink" data-action="toggleTrade" style="${navStyle(state.b2b ? '__b2b' : '')}">${t.trade}</button>
       <span class="lang"><button class="tlink" data-action="setLang" data-lang="en" style="${navStyle(state.lang === 'en' ? '__lang' : '')}">EN</button><span class="sep">/</span><button class="tlink" data-action="setLang" data-lang="ko" style="${navStyle(state.lang === 'ko' ? '__lang' : '')}">한</button></span>
+      <button class="tlink" data-action="openSearch" aria-label="${t.search}"><svg class="ico" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M13 13l5 5" stroke="currentColor" stroke-width="1.4"/></svg><span class="s-label">${t.search}</span></button>
       <button class="tlink bagbtn" data-action="openCart">${t.bag} <span class="bagcount${state.bump ? ' bump' : ''}">${cartCount()}</span></button>
     </div>
   </header>
@@ -252,8 +318,7 @@ function homeHtml(t) {
     ${sechead('04', t.houseEyebrow, t.houseSub, 'nav-about', t.aboutMore)}
     <div class="house-grid" style="margin-top:40px">
       <div class="house-panel">
-        <div class="house-word">해문</div>
-        <span class="seal-sq"></span>
+        <img class="house-mark" src="assets/haemun-mark-white.png" alt="Haemun emblem" loading="lazy">
         <span class="cap ov-tl muted2">海門 · SEA GATE</span>
       </div>
       <div class="house-text">
@@ -300,7 +365,7 @@ function mallHtml(t) {
     <aside class="shop-side">
       <div class="side-h">${t.category}</div>
       ${catFilters}
-      <div class="side-h" style="margin-top:32px">${t.origin}</div>
+      <div class="side-h" style="margin-top:32px">${PRODUCTS.some((p) => p.id.startsWith('wc')) ? t.brand : t.origin}</div>
       <div class="origin-wrap">${origins}</div>
       <button class="link-btn muted" data-action="clearFilters" style="margin-top:20px">${t.clear}</button>
     </aside>
@@ -389,7 +454,7 @@ function aboutHtml(t) {
     </div>
   </section>
   <section class="about-story">
-    <div class="about-panel"><div class="about-word">海門</div><span class="seal-sq" style="right:24px;bottom:24px"></span></div>
+    <div class="about-panel"><img class="about-mark" src="assets/haemun-mark-color.png" alt="Haemun emblem: a gate roof over the sea between two mountains" loading="lazy"><span class="cap about-cap">海門 · 해문 · SEA GATE</span></div>
     <div class="about-paras">${t.aboutParas.map((p) => `<p>${esc(p)}</p>`).join('')}</div>
   </section>
   <section class="sec">
@@ -426,7 +491,7 @@ function routeAndFooter(t) {
     </div>
   </section>
   <footer class="site-footer">
-    <div class="f-col f-brand"><div class="f-word">HAEMUN 해문</div><div class="muted">${t.footer}</div></div>
+    <div class="f-col f-brand"><img class="f-mark" src="assets/haemun-mark.png" alt="" width="64" height="64" loading="lazy"><img class="f-logo" src="assets/haemun-wordmark.png" alt="Haemun" width="110" height="21" loading="lazy"><div class="muted">${t.footer}</div></div>
     <div class="f-col"><div class="f-h">${t.shop}</div>${CATS.map((c) => `<button class="tlink f-link" data-action="goCat" data-cat="${c}">${t.cats[c]}</button>`).join('')}</div>
     <div class="f-col"><div class="f-h">${t.fHouse}</div><button class="tlink f-link" data-action="nav" data-view="journal">${t.journal}</button><button class="tlink f-link" data-action="nav" data-view="about">${t.about}</button><button class="tlink f-link" data-action="enableTrade">${t.trade}</button></div>
     <div class="f-col"><div class="f-h">${t.fHelp}</div><div class="muted">${t.fShip}<br>${t.fReturns}<br>${t.fContact}</div></div>
@@ -511,7 +576,7 @@ function cartHtml(t) {
       <div class="cart-foot">
         <div class="flex-b" style="font-size:14px;font-weight:500"><span>${t.subtotal}</span><span>${sgd(sub)}</span></div>
         <div class="muted" style="margin-top:6px">${t.gst}</div>
-        <button class="btn-solid cap" style="width:100%;margin-top:20px;justify-content:center" ${ids.length ? '' : 'disabled'}>${t.checkout}</button>
+        ${state.cartMsg ? `<p class="cart-msg">${state.cartMsg}</p>` : ''}<button class="btn-solid cap" data-action="checkout" style="width:100%;margin-top:20px;justify-content:center" ${ids.length ? '' : 'disabled'}>${t.checkout}</button>
       </div>
     </aside>
   </div>`;
@@ -529,7 +594,7 @@ function render() {
   } else if (state.view === 'about') body = aboutHtml(t);
 
   document.documentElement.lang = state.lang;
-  document.body.style.overflow = state.activeId || state.cartOpen ? 'hidden' : '';
+  document.body.style.overflow = state.activeId || state.cartOpen || state.searchOpen ? 'hidden' : '';
   document.getElementById('app').innerHTML = `
     ${svgDefs()}
     ${header(t)}
@@ -537,6 +602,7 @@ function render() {
     ${routeAndFooter(t)}
     ${pdpHtml(t)}
     ${state.cartOpen ? cartHtml(t) : ''}
+    ${state.searchOpen ? searchHtml(t) : ''}
   `;
 }
 
@@ -550,14 +616,22 @@ document.addEventListener('click', (e) => {
   else if (a === 'setCat') { go({ view: 'mall', cat: el.dataset.cat }); return; }
   else if (a === 'goCat') go({ view: 'mall', cat: el.dataset.cat || 'all', origin: 'all' });
   else if (a === 'openArticle') go({ view: 'article', postId: el.dataset.id });
-  else if (a === 'openProduct') setState({ activeId: el.dataset.id, qty: 1, tab: 'form', photoIdx: 0 });
+  else if (a === 'openProduct') openProduct(el.dataset.id);
+  else if (a === 'openSearch') openSearch();
+  else if (a === 'closeSearch') setState({ searchOpen: false });
+  else if (a === 'checkout') {
+    const live = Object.keys(state.cart).filter((id) => id.startsWith('wc') && findProduct(id));
+    if (!live.length) { setState({ cartMsg: T[state.lang].demoNote }); return; }
+    setState({ cartMsg: T[state.lang].toCheckout });
+    location.href = `${WP_SITE}/?haemun_cart=${live.map((id) => id.slice(2) + ':' + state.cart[id]).join(',')}`;
+  }
   else if (a === 'setPhoto') setState({ photoIdx: Number(el.dataset.idx) });
   else if (a === 'quick') {
     const p = PRODUCTS.find((x) => x.id === el.dataset.id);
-    if (p.service || state.b2b) setState({ activeId: p.id, qty: state.b2b && !p.service ? p.moq : 1, tab: p.service ? 'form' : 'spec', photoIdx: 0 });
+    if (p.service || state.b2b) openProduct(p.id, { qty: state.b2b && !p.service ? p.moq : 1, tab: p.service ? 'form' : 'spec' });
     else { addToCart(p.id, 1); setState({ cartOpen: true }); }
   }
-  else if (a === 'closeProduct') setState({ activeId: null });
+  else if (a === 'closeProduct') closeProduct();
   else if (a === 'setTab') setState({ tab: el.dataset.tab });
   else if (a === 'qty') {
     const raw = PRODUCTS.find((p) => p.id === state.activeId);
@@ -566,10 +640,10 @@ document.addEventListener('click', (e) => {
   }
   else if (a === 'addActive') {
     const raw = PRODUCTS.find((p) => p.id === state.activeId);
-    if (raw.service || state.b2b) setState({ activeId: null });
-    else { addToCart(raw.id, state.qty); setState({ activeId: null, cartOpen: true }); }
+    if (raw.service || state.b2b) closeProduct();
+    else { addToCart(raw.id, state.qty); closeProduct({ cartOpen: true, cartMsg: null }); }
   }
-  else if (a === 'openCart') setState({ cartOpen: true });
+  else if (a === 'openCart') setState({ cartOpen: true, cartMsg: null, searchOpen: false });
   else if (a === 'closeCart') setState({ cartOpen: false });
   else if (a === 'cartQty') addToCart(el.dataset.id, Number(el.dataset.delta));
   else if (a === 'setOrigin') setState({ origin: el.dataset.origin });
