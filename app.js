@@ -734,7 +734,7 @@ function journalHtml(t) {
   return `
   <section class="ed-mast">
     <div class="ed-run cap"><span>Haemun ${t.journal}</span><span>${season} · ${t.volume}</span><span>${t.edStories(POSTS.length)}</span></div>
-    <h1 class="ed-h1">${t.journal}</h1>
+    <h1 class="sr-only">${t.journal}</h1>
     <div class="ed-under"><p class="ed-tag">${t.jIntro}</p><nav class="ed-secs" aria-label="${t.category}">${sections}</nav></div>
   </section>
   ${posts.length ? coverHtml + contents + spread + more : `<p class="ed-empty">${t.none}</p>`}`;
