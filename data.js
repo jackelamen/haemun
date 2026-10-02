@@ -5,7 +5,7 @@ const CAT_COLOR = { beauty: '#C1272D', fashion: '#0B0B0C', wellness: '#1F3F8C', 
 // own tables, not a plain WordPress post. The Store API is WooCommerce's
 // public, no-auth-required endpoint meant for exactly this (a separate
 // storefront) — no API keys, no ACF setup needed.
-const WP_SITE = 'https://mediumblue-crow-786275.hostingersite.com';
+const WP_SITE = 'https://checkout.haemun.com';
 // API calls go to /wp-json on this site's own domain, which vercel.json
 // forwards to WordPress. Same-origin means no CORS rules to keep in sync
 // when the site's domain changes. (Checkout links still use WP_SITE.)

@@ -1,5 +1,5 @@
 {
   "rewrites": [
-    { "source": "/wp-json/:path*", "destination": "https://mediumblue-crow-786275.hostingersite.com/wp-json/:path*" }
+    { "source": "/wp-json/:path*", "destination": "https://checkout.haemun.com/wp-json/:path*" }
   ]
 }
