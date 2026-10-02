@@ -6,7 +6,7 @@ const region = (o) => o.split(',')[0];
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const state = {
-  lang: 'en', b2b: false, view: 'home', cat: 'all', origin: 'all', sort: 'feat',
+  lang: 'en', b2b: false, view: 'home', cat: 'all', origin: 'all', sort: 'new', shopQ: '', f: { price: 'all', coll: 'all', stock: false }, filterOpen: false, fDraft: null, fSec: 'cat',
   jcat: 'all', postId: null, cart: loadCart(), cartOpen: false, activeId: null, tab: 'form', qty: 1, photoIdx: 0,
   loading: !!WC_STORE_API,
 };
@@ -101,13 +101,23 @@ document.addEventListener('keydown', (e) => {
   if (state.searchOpen) setState({ searchOpen: false });
   else if (state.activeId) closeProduct();
   else if (state.cartOpen) setState({ cartOpen: false });
+  else if (state.filterOpen) setState({ filterOpen: false, fDraft: null });
 });
 document.addEventListener('change', (e) => {
   const k = e.target.dataset && e.target.dataset.change;
+  const fd = e.target.dataset && e.target.dataset.fd;
+  if (fd) { const v = fd === 'stock' ? e.target.checked : e.target.value; setState({ fDraft: { ...state.fDraft, [fd]: v } }); return; }
   if (k === 'origin') setState({ origin: e.target.value });
   else if (k === 'sort') setState({ sort: e.target.value });
 });
 document.addEventListener('input', (e) => {
+  if (e.target.id === 'shop-q') {
+    state.shopQ = e.target.value;
+    const t = T[state.lang], list = shopSort(shopFilter(state.cat, state.f, state.shopQ, state.origin));
+    document.getElementById('shop-results').innerHTML = shopGridHtml(t, list);
+    document.getElementById('shop-count').textContent = t.results(list.length);
+    return;
+  }
   if (e.target.id !== 'search-input') return;
   state.q = e.target.value;
   document.getElementById('search-results').innerHTML = searchResults(T[state.lang]);
@@ -543,39 +553,124 @@ function dropsArchiveHtml(t) {
 }
 
 
+// Shop: featured row, toolbar (filter, search, sort), then the grid.
+const PRICE_BANDS = [['all', 0, Infinity], ['u50', 0, 50], ['50', 50, 100], ['100', 100, 250], ['250', 250, 1000], ['1k', 1000, Infinity]];
+const money = (n) => (PREFIX[STORE_CURRENCY] || STORE_CURRENCY + ' ') + n.toLocaleString('en-SG');
+function priceLabel(t, id) {
+  const [, lo, hi] = PRICE_BANDS.find((b) => b[0] === id);
+  if (id === 'all') return t.all;
+  if (lo === 0) return t.under(money(hi));
+  if (hi === Infinity) return t.over(money(lo));
+  return `${money(lo)}–${money(hi)}`;
+}
+const collLabel = (t, id) => (id === 'vol' ? t.volume : id === 'feat' ? t.collFeat : t.all);
+const brandsOf = () => [...new Set(PRODUCTS.map((p) => region(p.origin)).filter(Boolean))].sort();
+
+function shopFilter(cat, f, q, origin) {
+  const band = PRICE_BANDS.find((b) => b[0] === f.price) || PRICE_BANDS[0];
+  const words = norm(q).trim().split(/\s+/).filter(Boolean);
+  return PRODUCTS.filter((p) => (cat === 'all' || p.cat === cat)
+    && p.price >= band[1] && p.price < band[2]
+    && (f.coll === 'all' || (f.coll === 'vol' ? p.vol : p.featured))
+    && (!f.stock || p.inStock !== false)
+    && (origin === 'all' || region(p.origin) === origin)
+    && (!words.length || words.every((w) => norm([p.name, p.ko, p.origin, p.teaser, T.en.cats[p.cat], T.ko.cats[p.cat]].join(' ')).includes(w))));
+}
+function shopSort(list) {
+  const by = { new: (a, b) => a.arrival - b.arrival, low: (a, b) => a.price - b.price, high: (a, b) => b.price - a.price, name: (a, b) => a.name.localeCompare(b.name) }[state.sort] || ((a, b) => a.arrival - b.arrival);
+  return list.slice().sort(by);
+}
+function shopGridHtml(t, list) {
+  if (state.loading) return skeletons(6, '3 / 4');
+  if (list.length) return list.map((p) => cardHtml(p, t, 460, { number: false })).join('');
+  const msg = state.shopQ.trim() ? t.noneQ(esc(state.shopQ.trim())) : t.none;
+  return `<div class="empty">${msg} <button class="link-btn" data-action="clearFilters">${t.clear}</button></div>`;
+}
+function featuredRowHtml(t) {
+  const picks = CATS.map((c) => PRODUCTS.find((p) => p.featured && p.cat === c)).filter(Boolean);
+  if (!picks.length || state.loading) return '';
+  return `<section class="feat-row">
+    <div class="feat-row-head"><span class="cap">${t.featuredH}</span><span class="muted small">${t.featuredSub}</span></div>
+    <div class="feat-row-items">${picks.map((p) => {
+      const v = viewOf(p, t);
+      return `<button class="fr-item" data-action="openProduct" data-id="${p.id}">
+        <span class="fr-img" style="background:${p.bg}">${mediaHtml(p, false)}</span>
+        <span class="fr-text"><span class="fr-cat">${dotHtml(v.dotColor)}${v.catLabel}</span><span class="fr-name">${esc(p.name)}</span><span class="fr-price">${v.priceLabel}</span></span>
+      </button>`;
+    }).join('')}</div>
+  </section>`;
+}
+function activeChips(t) {
+  const f = state.f, chips = [];
+  if (f.price !== 'all') chips.push(['price', priceLabel(t, f.price)]);
+  if (f.coll !== 'all') chips.push(['coll', collLabel(t, f.coll)]);
+  if (f.stock) chips.push(['stock', t.inStockOnly]);
+  if (state.origin !== 'all') chips.push(['origin', state.origin]);
+  return chips.map(([k, label]) => `<button class="shop-chip" data-action="dropFilter" data-k="${k}">${esc(label)} <span aria-hidden="true">✕</span></button>`).join('');
+}
+
 function mallHtml(t) {
-  const live = PRODUCTS.some((p) => p.id.startsWith('wc'));
-  let mall = PRODUCTS.filter((p) => (state.cat === 'all' || p.cat === state.cat) && (state.origin === 'all' || region(p.origin) === state.origin));
-  if (state.sort === 'low') mall = mall.slice().sort((a, b) => a.price - b.price);
-  if (state.sort === 'high') mall = mall.slice().sort((a, b) => b.price - a.price);
+  const list = shopSort(shopFilter(state.cat, state.f, state.shopQ, state.origin));
   const mallTitle = state.cat === 'all' ? t.shopAll : t.cats[state.cat];
   const intro = state.cat === 'all' ? t.shopIntro : t.catDesc[state.cat];
   const tabs = ['all'].concat(CATS).map((c) => {
     const n = PRODUCTS.filter((p) => c === 'all' || p.cat === c).length;
     return `<button class="shop-tab${state.cat === c ? ' on' : ''}" data-action="setCat" data-cat="${c}" aria-pressed="${state.cat === c}">${c === 'all' ? '' : dotHtml(CAT_COLOR[c])}<span>${c === 'all' ? t.all : t.cats[c]}</span><span class="shop-tab-n">${n}</span></button>`;
   }).join('');
-  const originList = [...new Set(PRODUCTS.filter((p) => state.cat === 'all' || p.cat === state.cat).map((p) => region(p.origin)).filter(Boolean))].sort();
-  const originSel = originList.length > 1 ? `<label class="shop-sel"><span class="sr-only">${live ? t.brand : t.origin}</span><select data-change="origin">
-      <option value="all">${live ? t.allBrands : t.allOrigins}</option>${originList.map((o) => `<option value="${esc(o)}"${state.origin === o ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select></label>` : '';
-  const sortSel = `<label class="shop-sel"><span class="sr-only">${t.sort}</span><select data-change="sort">${[['feat', t.sNew], ['low', t.sLow], ['high', t.sHigh]].map(([id, label]) => `<option value="${id}"${state.sort === id ? ' selected' : ''}>${t.sort}: ${label}</option>`).join('')}</select></label>`;
-  const filtered = state.origin !== 'all' ? `<button class="shop-chip" data-action="setOrigin" data-origin="all">${esc(state.origin)} <span aria-hidden="true">✕</span></button>` : '';
+  const sortSel = `<label class="shop-sel"><span class="sr-only">${t.sort}</span><select data-change="sort">${[['new', t.sNew], ['low', t.sLow], ['high', t.sHigh], ['name', t.sName]].map(([id, label]) => `<option value="${id}"${state.sort === id ? ' selected' : ''}>${label}</option>`).join('')}</select></label>`;
   const medNote = state.cat === 'medical' ? `<div class="med-note"><span>${t.medNote}</span><span class="cap" style="color:#2E6B5E">${t.medTag}</span></div>` : '';
   const offline = LIVE_STATUS === 'failed' ? `<div class="live-note">${t.liveFail}</div>` : '';
-  const items = state.loading ? skeletons(6, '3 / 4') : mall.length ? mall.map((p) => cardHtml(p, t, 460, { number: false })).join('') : `<div class="empty">${t.none} <button class="link-btn" data-action="clearFilters">${t.clear}</button></div>`;
   return `
   <section class="shop-hero">
     <h1 class="shop-title">${mallTitle}</h1>
     <p class="shop-intro">${intro}</p>
   </section>
+  ${state.cat === 'all' ? featuredRowHtml(t) : ''}
   <nav class="shop-tabs" aria-label="${t.category}"><div class="shop-tabs-in">${tabs}</div></nav>
   <section class="shop-main">
     <div class="shop-bar">
-      <div class="shop-count"><span>${mall.length} ${t.objects}</span>${filtered}</div>
-      <div class="shop-tools">${originSel}${sortSel}</div>
+      <div class="shop-left">
+        <button class="filter-btn" data-action="openFilter" aria-haspopup="dialog"><svg class="ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 6h14M6 10h8M8.5 14h3" stroke="currentColor" stroke-width="1.4" fill="none"/></svg><span>${t.filter}</span><span class="filter-n" id="shop-count">${t.results(list.length)}</span></button>
+        <span class="shop-chips">${activeChips(t)}</span>
+      </div>
+      <div class="shop-tools">
+        <label class="shop-search"><svg class="ico" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M13 13l5 5" stroke="currentColor" stroke-width="1.4"/></svg><span class="sr-only">${t.searchShop}</span><input id="shop-q" type="search" autocomplete="off" placeholder="${t.searchShop}" value="${esc(state.shopQ)}"></label>
+        ${sortSel}
+      </div>
     </div>
     ${offline}${medNote}
-    <div class="shop-grid">${items}</div>
-  </section>`;
+    <div class="shop-grid" id="shop-results">${shopGridHtml(t, list)}</div>
+  </section>
+  ${state.filterOpen ? filterHtml(t) : ''}`;
+}
+
+// Filter drawer: choices are a draft until "Show N results" applies them.
+function filterHtml(t) {
+  const d = state.fDraft;
+  const n = shopFilter(d.cat, d, state.shopQ, d.origin).length;
+  const radios = (key, options, current) => options.map(([id, label]) => `<label class="fd-opt"><input type="radio" name="fd-${key}" data-fd="${key}" value="${esc(id)}"${current === id ? ' checked' : ''}><span>${label}</span></label>`).join('');
+  const brands = brandsOf();
+  const sections = [
+    ['cat', t.fCat, d.cat === 'all' ? t.all : t.cats[d.cat], radios('cat', [['all', t.all]].concat(CATS.map((c) => [c, t.cats[c]])), d.cat)],
+    ['price', t.fPrice, priceLabel(t, d.price), radios('price', PRICE_BANDS.map(([id]) => [id, priceLabel(t, id)]), d.price)],
+    ['coll', t.fColl, collLabel(t, d.coll), radios('coll', [['all', t.all], ['vol', t.volume], ['feat', t.collFeat]], d.coll)],
+    ['stock', t.fAvail, d.stock ? t.inStockOnly : t.all, `<label class="fd-opt"><input type="checkbox" data-fd="stock"${d.stock ? ' checked' : ''}><span>${t.inStockOnly}</span></label>`],
+  ];
+  if (brands.length > 1) sections.push(['origin', t.fBrand, d.origin === 'all' ? t.all : esc(d.origin), radios('origin', [['all', t.all]].concat(brands.map((b) => [b, esc(b)])), d.origin)]);
+  return `<div class="fd-layer" role="dialog" aria-modal="true" aria-label="${t.filter}">
+    <button class="fd-scrim" data-action="closeFilter" aria-label="${t.close}"></button>
+    <aside class="fd-panel">
+      <div class="fd-head"><span class="cap">${t.filter}</span><button class="fd-x" data-action="closeFilter" aria-label="${t.close}">✕</button></div>
+      <div class="fd-body">${sections.map(([key, title, summary, body]) => {
+        const open = state.fSec === key;
+        return `<div class="fd-sec${open ? ' open' : ''}">
+          <button class="fd-sh" data-action="fdSec" data-k="${key}" aria-expanded="${open}"><span><span class="fd-title">${title}</span><span class="fd-sum">${summary}</span></span><svg class="fd-chev" viewBox="0 0 12 8" aria-hidden="true"><path d="M1 1.5l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button>
+          ${open ? `<div class="fd-opts">${body}</div>` : ''}
+        </div>`;
+      }).join('')}</div>
+      <div class="fd-foot"><button class="fd-clear" data-action="fdClear">${t.clearAll}</button><button class="fd-apply" data-action="fdApply">${t.showResults(n)}</button></div>
+    </aside>
+  </div>`;
 }
 
 function journalHtml(t) {
@@ -803,7 +898,7 @@ function render() {
   } else if (state.view === 'about') body = aboutHtml(t);
 
   document.documentElement.lang = state.lang;
-  document.body.style.overflow = state.activeId || state.cartOpen || state.searchOpen ? 'hidden' : '';
+  document.body.style.overflow = state.activeId || state.cartOpen || state.searchOpen || state.filterOpen ? 'hidden' : '';
   const prevVideo = document.querySelector('.vh-media');
   const videoAt = prevVideo && prevVideo.tagName === 'VIDEO' ? prevVideo.currentTime : 0;
   document.getElementById('app').innerHTML = `
@@ -907,7 +1002,21 @@ document.addEventListener('click', (e) => {
   else if (a === 'cartQty') addToCart(el.dataset.id, Number(el.dataset.delta));
   else if (a === 'setOrigin') setState({ origin: el.dataset.origin });
   else if (a === 'setSort') setState({ sort: el.dataset.sort });
-  else if (a === 'clearFilters') setState({ cat: 'all', origin: 'all', sort: 'feat' });
+  else if (a === 'clearFilters') { setState({ origin: 'all', shopQ: '', f: { price: 'all', coll: 'all', stock: false } }); }
+  else if (a === 'openFilter') setState({ filterOpen: true, fSec: state.fSec || 'cat', fDraft: { ...state.f, cat: state.cat, origin: state.origin } });
+  else if (a === 'closeFilter') setState({ filterOpen: false, fDraft: null });
+  else if (a === 'fdSec') setState({ fSec: state.fSec === el.dataset.k ? null : el.dataset.k });
+  else if (a === 'fdClear') setState({ fDraft: { price: 'all', coll: 'all', stock: false, cat: 'all', origin: 'all' } });
+  else if (a === 'fdApply') {
+    const { cat, origin, ...f } = state.fDraft;
+    setState({ f, cat, origin, filterOpen: false, fDraft: null });
+    history.replaceState(null, '', toHash());
+  }
+  else if (a === 'dropFilter') {
+    const k = el.dataset.k;
+    if (k === 'origin') setState({ origin: 'all' });
+    else setState({ f: { ...state.f, [k]: k === 'stock' ? false : 'all' } });
+  }
   else if (a === 'setJcat') setState({ jcat: el.dataset.jcat });
   else if (a === 'toggleTrade') setState({ b2b: !state.b2b });
   else if (a === 'enableTrade') { setState({ b2b: true }); window.scrollTo(0, 0); }

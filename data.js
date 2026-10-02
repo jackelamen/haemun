@@ -99,6 +99,8 @@ function mapWcProduct(p) {
     photo: images[0] || null,
     gallery: images,
     price,
+    inStock: p.is_in_stock !== false,
+    featured: false, // set by loadProducts from the store's featured list
     name: stripTags(p.name),
     ko: '',
     origin: (p.brands && p.brands[0] && stripTags(p.brands[0].name)) || '',
@@ -118,11 +120,18 @@ function mapWcProduct(p) {
 async function loadProducts() {
   if (!WC_STORE_API) return;
   try {
-    const res = await fetch(`${WC_STORE_API}/products?per_page=100`);
+    // Newest first, so list order doubles as "Recent arrivals". The Store API
+    // doesn't expose the featured flag on products, only as a filter, so the
+    // featured list is fetched alongside.
+    const [res, featRes] = await Promise.all([
+      fetch(`${WC_STORE_API}/products?per_page=100&orderby=date&order=desc`),
+      fetch(`${WC_STORE_API}/products?per_page=100&featured=true`).catch(() => null),
+    ]);
     if (!res.ok) throw new Error('WooCommerce Store API request failed: ' + res.status);
     const items = await res.json();
     if (!Array.isArray(items) || !items.length) { LIVE_STATUS = 'empty'; return; } // keep mock fallback
-    const mapped = items.map(mapWcProduct);
+    const featured = new Set(featRes && featRes.ok ? (await featRes.json()).map((p) => p.id) : []);
+    const mapped = items.map((p, i) => ({ ...mapWcProduct(p), arrival: i, featured: featured.has(p.id) }));
     if (items[0].prices && items[0].prices.currency_code) STORE_CURRENCY = items[0].prices.currency_code;
     PRODUCTS.length = 0;
     PRODUCTS.push(...mapped);
@@ -360,6 +369,12 @@ const T = {
 
 // Landing page (volume hero, cover band, "Six ways in").
 Object.assign(T.en, {
+  sNew: 'Recent arrivals', sLow: 'Price: low to high', sHigh: 'Price: high to low', sName: 'Name: A\u2013Z',
+  featuredH: 'Featured', featuredSub: 'One from each category, picked by us',
+  filter: 'Filter', results: (n) => (n === 1 ? '1 result' : `${n} results`), searchShop: 'Search the shop',
+  fCat: 'Category', fPrice: 'Price', fColl: 'Collection', fAvail: 'Availability', fBrand: 'Brand',
+  inStockOnly: 'In stock only', collFeat: 'Featured', clearAll: 'Clear all', showResults: (n) => (n === 1 ? 'Show 1 result' : `Show ${n} results`),
+  under: (x) => `Under ${x}`, over: (x) => `${x} and over`, noneQ: (q) => `Nothing matches \u201c${q}\u201d.`,
   xingKicker: 'The crossing', xingH: 'Every piece makes the same crossing.',
   xingB: 'From a maker in Korea to your door in Singapore: 4,630 km by sea, with every batch documented and cleared before it is listed.',
   xingNext: (vol, date, days) => `Where we are this season: Volume ${vol} opens ${date}, ${days} days to go`,
@@ -399,6 +414,12 @@ Object.assign(T.en, {
   },
 });
 Object.assign(T.ko, {
+  sNew: '최신순', sLow: '낮은 가격순', sHigh: '높은 가격순', sName: '이름순',
+  featuredH: '추천', featuredSub: '카테고리마다 하나씩 고른 추천 제품',
+  filter: '필터', results: (n) => `${n}개 제품`, searchShop: '숍에서 검색',
+  fCat: '카테고리', fPrice: '가격', fColl: '컬렉션', fAvail: '재고', fBrand: '브랜드',
+  inStockOnly: '재고 있는 제품만', collFeat: '추천', clearAll: '모두 지우기', showResults: (n) => `${n}개 제품 보기`,
+  under: (x) => `${x} 미만`, over: (x) => `${x} 이상`, noneQ: (q) => `\u201c${q}\u201d에 맞는 제품이 없습니다.`,
   xingKicker: '바다를 건너', xingH: '모든 제품은 같은 바다를 건넙니다.',
   xingB: '한국의 메이커에서 싱가포르의 문 앞까지, 바닷길 4,630km. 모든 배치는 기록되고 통관을 마친 뒤에야 등록됩니다.',
   xingNext: (vol, date, days) => `이번 시즌의 위치: 제${Number(vol)}호 ${date} 공개, ${days}일 남음`,
@@ -440,4 +461,5 @@ Object.assign(T.ko, {
 
 // Kept so journal stories can still draw their illustration after live
 // products replace PRODUCTS.
+PRODUCTS.forEach((p, i) => { p.arrival = i; p.inStock = true; p.featured = !!p.vol; });
 const MOCK_PRODUCTS = PRODUCTS.slice();
