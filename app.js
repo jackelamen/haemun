@@ -32,8 +32,8 @@ function toHash() {
 }
 function pageHash() {
   if (state.view === 'mall') return state.cat === 'all' ? '#/shop' : '#/shop/' + state.cat;
-  if (state.view === 'journal') return '#/journal';
-  if (state.view === 'article') return '#/journal/' + state.postId;
+  if (state.view === 'journal') return '#/editorial';
+  if (state.view === 'article') return '#/editorial/' + state.postId;
   if (state.view === 'about') return '#/about';
   if (state.view === 'drop') return '#/volume/' + VOLUME.no;
   if (state.view === 'drops') return '#/volumes';
@@ -46,7 +46,7 @@ function fromHash() {
   const product = { activeId: pid || null, qty: 1, tab: 'form', photoIdx: 0 };
   const [, a, b] = path.split('/');
   if (a === 'shop') return { view: 'mall', cat: CATS.includes(b) ? b : 'all', ...product };
-  if (a === 'journal') return b ? { view: 'article', postId: b, ...product } : { view: 'journal', postId: null, ...product };
+  if (a === 'journal' || a === 'editorial') return b ? { view: 'article', postId: b, ...product } : { view: 'journal', postId: null, ...product };
   if (a === 'about') return { view: 'about', ...product };
   if (a === 'volume') return { view: 'drop', ...product };
   if (a === 'volumes') return { view: 'drops', ...product };
@@ -258,7 +258,7 @@ function header(t) {
   <div class="cap annbar"><span>${t.ann1}</span><span class="sep">·</span><span>${t.ann2}</span></div>
   <header class="site-header${filmHeader() ? ' on-film' : ''}">
     <nav class="hnav">
-      ${nav('drop', t.volume)}${nav('mall', t.shopAll)}${nav('brands', t.brands)}${nav('journal', t.journal)}${nav('about', t.about)}
+      <button class="tlink nav-vol" data-action="nav" data-view="drop" style="${navStyle('drop')}"><span class="nav-live"></span>${t.volume}</button>${nav('mall', t.shopAll)}${nav('brands', t.brands)}${nav('journal', t.journal)}${nav('about', t.about)}
     </nav>
     <button class="logo" data-action="nav" data-view="home">
       <img class="logo-mark on-light" src="assets/haemun-mark.png" alt="" width="40" height="40"><img class="logo-word on-light" src="assets/haemun-wordmark.png" alt="Haemun" width="92" height="17"><img class="logo-mark on-dark" src="assets/haemun-mark-white.png" alt="" width="40" height="40"><img class="logo-word on-dark" src="assets/haemun-wordmark-white.png" alt="" width="92" height="17">
@@ -346,7 +346,7 @@ function volHeroHtml(t, vol) {
   const cats = CATS.filter((c) => vol.some((p) => p.cat === c));
   const chips = cats.map((c) => {
     const p = vol.find((x) => x.cat === c);
-    return `<button class="vh-chip" data-action="volPick" data-id="${p.id}">${t.curious[c]}</button>`;
+    return `<button class="vh-chip" data-action="openProduct" data-id="${p.id}">${t.curious[c]}</button>`;
   }).join('');
   const media = h.video
     ? `<video class="vh-media" autoplay muted loop playsinline poster="${h.wide}" aria-label="${esc(t.heroAlt)}">
@@ -360,8 +360,9 @@ function volHeroHtml(t, vol) {
       <div class="cap vh-kicker"><span class="vh-live"></span>${t.heroKicker(VOLUME.no, season)}</div>
       <h1 class="vh-h1">${esc(t.heroH)}</h1>
       <p class="vh-dek">${esc(t.heroDek)}</p>
+      <button class="vh-cta" data-action="nav" data-view="drop"><span class="vh-live"></span>${t.volCta(VOLUME.no)} <span aria-hidden="true">→</span></button>
       ${chips ? `<div class="vh-ask"><div class="cap vh-q">${t.curiousQ}</div><div class="vh-chips">${chips}</div></div>` : ''}
-      <div class="vh-links"><button class="vh-link cap" data-action="nav" data-view="drop">${t.seeSix(vol.length)}</button><button class="vh-link dim cap" data-action="goCat" data-cat="all">${t.shopEverything(PRODUCTS.length)}</button></div>
+      <div class="vh-links"><button class="vh-link dim cap" data-action="goCat" data-cat="all">${t.shopEverything(PRODUCTS.length)}</button></div>
     </div>
   </section>`;
 }
@@ -972,7 +973,6 @@ function render() {
   playIntro();
   syncHeader();
   placeCountdown();
-  showPick();
 }
 
 
@@ -988,18 +988,6 @@ function syncHeader() {
 }
 window.addEventListener('scroll', syncHeader, { passive: true });
 window.addEventListener('resize', syncHeader);
-
-// Arriving from a hero chip: bring that piece into view and mark it.
-function showPick() {
-  if (!state.pick || state.view !== 'drop' || state.loading) return;
-  const card = document.getElementById('vc-' + state.pick);
-  state.pick = null;
-  if (!card) return;
-  requestAnimationFrame(() => {
-    window.scrollTo({ top: card.getBoundingClientRect().top + scrollY - 120, behavior: 'smooth' });
-    card.classList.add('vc-pick');
-  });
-}
 
 // One orchestrated moment: the cover settles in on first view, and never
 // replays on later re-renders.
@@ -1079,7 +1067,6 @@ document.addEventListener('click', (e) => {
   else if (a === 'toggleTrade') setState({ b2b: !state.b2b });
   else if (a === 'enableTrade') { setState({ b2b: true }); window.scrollTo(0, 0); }
   else if (a === 'setLang') setState({ lang: el.dataset.lang });
-  else if (a === 'volPick') { state.pick = el.dataset.id; go({ view: 'drop', postId: null }); }
   else if (a === 'scrollDrops') { const d = document.getElementById('drops'); if (d) window.scrollTo({ top: d.getBoundingClientRect().top + scrollY - 120, behavior: 'smooth' }); }
 });
 

@@ -752,3 +752,12 @@ button:disabled { opacity: .35; cursor: not-allowed; }
   .br-grid { grid-template-columns: 1fr; }
   .br-cta { margin-top: 80px; }
 }
+
+/* Hero: the highlighted way into the current volume */
+.vh-cta { display: inline-flex; align-items: center; gap: 12px; margin-top: 26px; min-height: 50px; padding: 0 24px 0 20px; border: 1px solid #FFFFFF; border-radius: 999px; background: #FFFFFF; color: #0B0B0C; font-size: 15px; font-weight: 500; transition: background .2s, color .2s; }
+.vh-cta:hover { background: transparent; color: #FFFFFF; }
+.vh-ask { margin-top: 30px; }
+
+/* Header: the current volume is always marked */
+.nav-vol { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; color: #0B0B0C !important; }
+.nav-live { width: 7px; height: 7px; border-radius: 50%; background: #C1272D; box-shadow: 0 0 0 3px rgba(193,39,45,.18); animation: pulse 2.4s ease-in-out infinite; }
