@@ -431,7 +431,7 @@ window.addEventListener('scroll', syncProgress, { passive: true });
 function catTilesHtml(t) {
   return CATS.map((c, i) => {
     const pick = PRODUCTS.find((p) => p.cat === c && p.photo);
-    const thumb = `<span class="ci-th">${pick ? `<img src="${esc(pick.photo)}" alt="" loading="lazy" decoding="async">` : ''}</span>`;
+    const thumb = `<span class="ci-th">${pick ? `<img src="${esc(pick.thumb || pick.photo)}" alt="" decoding="async">` : ''}</span>`;
     return `<button class="ci-row" data-action="goCat" data-cat="${c}">
       <span class="ci-no mono small">${String(i + 1).padStart(2, '0')}</span>
       <span class="ci-name">${dotHtml(CAT_COLOR[c])}${t.cats[c]}</span>

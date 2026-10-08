@@ -64,7 +64,7 @@ function tradeRowHtml(p) {
   const c = trCase(p), n = TRADE.qty[p.id] || 0, w = trBase(p), tag = CAT_COLOR[p.cat];
   const stock = p.inStock ? 'In stock · 3–5 days' : 'Made to order · 3–6 weeks';
   return `<div class="trr${n ? ' trr-on' : ''}">
-    <div class="trr-img" style="background:${p.bg}">${mediaHtml(p)}</div>
+    <div class="trr-img" style="background:${p.bg}">${mediaHtml({ ...p, photo: p.thumb || p.photo })}</div>
     <div class="trr-main">
       <button class="trr-name" data-action="openProduct" data-id="${p.id}">${esc(p.name)}</button>
       <div class="trr-meta">${dotHtml(tag)}${T[state.lang].cats[p.cat]}${p.origin ? ' · ' + esc(p.origin) : ''}${p.vol ? ' · <span class="trr-vol">Vol. 01</span>' : ''}</div>
