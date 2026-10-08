@@ -426,18 +426,17 @@ function syncProgress() {
 }
 window.addEventListener('scroll', syncProgress, { passive: true });
 
-// Home: the categories as a short index. Each row shows a few real pieces
-// from that category instead of a general scene.
+// Home: the categories as one compact band. Each shows a real piece from
+// that category instead of a general scene.
 function catTilesHtml(t) {
   return CATS.map((c, i) => {
-    const picks = PRODUCTS.filter((p) => p.cat === c && p.photo).slice(0, 3);
-    const thumbs = state.loading ? '<span class="ci-th ci-skel"></span><span class="ci-th ci-skel"></span><span class="ci-th ci-skel"></span>'
-      : picks.map((p) => `<span class="ci-th"><img src="${esc(p.photo)}" alt="" loading="lazy" decoding="async"></span>`).join('');
+    const pick = PRODUCTS.find((p) => p.cat === c && p.photo);
+    const thumb = `<span class="ci-th">${pick ? `<img src="${esc(pick.photo)}" alt="" loading="lazy" decoding="async">` : ''}</span>`;
     return `<button class="ci-row" data-action="goCat" data-cat="${c}">
       <span class="ci-no mono small">${String(i + 1).padStart(2, '0')}</span>
       <span class="ci-name">${dotHtml(CAT_COLOR[c])}${t.cats[c]}</span>
       <span class="ci-desc">${t.catDesc[c]}</span>
-      <span class="ci-thumbs">${thumbs}</span>
+      ${thumb}
       <span class="ci-go mono small">${catCount(c)}</span>
     </button>`;
   }).join('');
