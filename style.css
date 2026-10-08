@@ -1083,3 +1083,5 @@ button:disabled { opacity: .35; cursor: not-allowed; }
 .tr-sec-top { padding-top: 56px; }
 @media (max-width: 1100px) { .tr-moq { grid-template-columns: 1fr; gap: 32px; } }
 @media (max-width: 760px) { .tr-acct-in { padding: 12px 16px; gap: 12px; } .tr-acct .tr-demo { margin-left: 0; width: 100%; } .tr-lock { padding: 24px; } .trm { grid-template-columns: 1.3fr 1fr .8fr; font-size: 13px; } }
+
+.f-lockup { display: block; width: 210px; height: auto; margin-bottom: 18px; }

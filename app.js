@@ -226,7 +226,7 @@ function header(t) {
       <button class="tlink nav-vol" data-action="nav" data-view="drop" style="${navStyle('drop')}">${t.volume}<span class="stamp stamp-sm">${t.now}</span></button>${nav('mall', t.shopAll)}${nav('brands', t.brands)}${nav('journal', t.journal)}${nav('about', t.about)}
     </nav>
     <button class="logo" data-action="nav" data-view="home">
-      <img class="logo-mark logo-seal" src="assets/haemun-mark-seal.png" alt="" width="40" height="40"><img class="logo-word on-light" src="assets/haemun-wordmark.png" alt="Haemun" width="92" height="17"><img class="logo-word on-dark" src="assets/haemun-wordmark-white.png" alt="" width="92" height="17">
+      <img class="logo-mark logo-seal" src="assets/logo/haemun-badge.svg" alt="" width="40" height="40"><img class="logo-word on-light" src="assets/logo/haemun-wordmark.svg" alt="Haemun" width="92" height="16"><img class="logo-word on-dark" src="assets/logo/haemun-wordmark-white.svg" alt="" width="92" height="16">
     </button>
     <div class="htools">
       <button class="tlink" data-action="nav" data-view="trade" style="${navStyle('trade')}">${t.trade}</button>
@@ -455,7 +455,7 @@ function whyHtml(t) {
     <div class="why-lead">
       <p class="why-h">${esc(t.houseH)}</p>
       <p class="why-b">${esc(t.houseB)}</p>
-      <div class="why-name"><img src="assets/haemun-mark.png" alt="" width="44" height="44" loading="lazy"><span>${esc(t.whyName)}</span></div>
+      <div class="why-name"><img src="assets/logo/haemun-badge.svg" alt="" width="44" height="44" loading="lazy"><span>${esc(t.whyName)}</span></div>
       <button class="link-btn" data-action="nav-about">${t.aboutMore} →</button>
     </div>
     <div class="why-grid">
@@ -916,7 +916,7 @@ function brandHtml(t) {
 function routeAndFooter(t) {
   return `
   <footer class="site-footer">
-    <div class="f-col f-brand"><img class="f-mark" src="assets/haemun-mark.png" alt="" width="64" height="64" loading="lazy"><img class="f-logo" src="assets/haemun-wordmark.png" alt="Haemun" width="110" height="21" loading="lazy"><div class="muted">${t.footer}</div></div>
+    <div class="f-col f-brand"><img class="f-lockup" src="assets/logo/haemun-logo-horizontal.svg" alt="Haemun" width="210" height="80" loading="lazy"><div class="muted">${t.footer}</div></div>
     <div class="f-col"><div class="f-h">${t.shop}</div>${CATS.map((c) => `<button class="tlink f-link" data-action="goCat" data-cat="${c}">${t.cats[c]}</button>`).join('')}</div>
     <div class="f-col"><div class="f-h">${t.fHouse}</div><button class="tlink f-link" data-action="nav" data-view="drop">${t.volume}</button><button class="tlink f-link" data-action="nav" data-view="drops">${t.pastDrops}</button><button class="tlink f-link" data-action="nav" data-view="brands">${t.brands}</button><button class="tlink f-link" data-action="nav" data-view="journal">${t.journal}</button><button class="tlink f-link" data-action="nav" data-view="about">${t.about}</button><button class="tlink f-link" data-action="enableTrade">${t.trade}</button></div>
     <div class="f-col"><div class="f-h">${t.fHelp}</div><div class="muted">${t.fShip}<br>${t.fReturns}<br>${t.fContact}</div></div>
