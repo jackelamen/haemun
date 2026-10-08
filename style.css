@@ -1056,3 +1056,30 @@ button:disabled { opacity: .35; cursor: not-allowed; }
   .trr-img { width: 64px; height: 80px; grid-row: 1 / span 3; align-self: start; }
   .tr-excl-g > div { padding: 20px; }
 }
+
+.tr-btn-dark { background: #0B0B0C; color: #FFFFFF; border-color: #0B0B0C; margin-top: 8px; }
+.tr-moq { display: grid; grid-template-columns: 7fr 5fr; gap: 56px; align-items: start; }
+.trm { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 16px; padding: 18px 0; border-bottom: 1px solid #E6E6E3; font-size: 15px; }
+.trm b { font-size: 22px; font-weight: 300; letter-spacing: -.03em; }
+.trm-h { padding: 10px 0; border-bottom: 1px solid #0B0B0C; }
+.tr-lock { display: flex; flex-direction: column; gap: 14px; padding: 36px; background: #0B0B0C; color: #FFFFFF; }
+.tr-lock-k { color: #C1272D; }
+.tr-lock h3 { margin: 0; font-size: 28px; font-weight: 300; line-height: 1.15; letter-spacing: -.035em; }
+.tr-lock p { margin: 0; line-height: 1.7; color: rgba(255,255,255,.75); }
+.tr-lock .tr-btn-dark { background: #FFFFFF; color: #0B0B0C; border-color: #FFFFFF; align-self: flex-start; }
+.tr-lock .tr-btn-dark:hover { background: #C1272D; border-color: #C1272D; color: #FFFFFF; }
+.tr-lock .muted { color: rgba(255,255,255,.5); }
+.tr-gate-in { max-width: 460px; margin: 0 auto; padding: 120px 24px 160px; }
+.tr-gate .tr-kick { color: #C1272D; }
+.tr-gate h1 { margin: 24px 0 0; font-size: 56px; font-weight: 300; letter-spacing: -.05em; }
+.tr-gate-in > p { margin: 14px 0 28px; line-height: 1.7; color: #4A4A48; }
+.tr-login { grid-template-columns: 1fr; margin-bottom: 20px; }
+.tr-acct { background: #0B0B0C; color: #FFFFFF; }
+.tr-acct-in { display: flex; align-items: center; gap: 28px; max-width: 1440px; margin: 0 auto; padding: 12px 40px; font-size: 12px; flex-wrap: wrap; }
+.tr-acct .link-btn { color: #FFFFFF; }
+.tr-acct-mid { color: rgba(255,255,255,.7); }
+.tr-acct-mid b { color: #FFFFFF; font-weight: 500; }
+.tr-acct .tr-demo { margin-left: auto; }
+.tr-sec-top { padding-top: 56px; }
+@media (max-width: 1100px) { .tr-moq { grid-template-columns: 1fr; gap: 32px; } }
+@media (max-width: 760px) { .tr-acct-in { padding: 12px 16px; gap: 12px; } .tr-acct .tr-demo { margin-left: 0; width: 100%; } .tr-lock { padding: 24px; } .trm { grid-template-columns: 1.3fr 1fr .8fr; font-size: 13px; } }

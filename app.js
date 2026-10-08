@@ -38,6 +38,7 @@ function pageHash() {
   if (state.view === 'drop') return '#/volume/' + VOLUME.no;
   if (state.view === 'drops') return '#/volumes';
   if (state.view === 'trade') return '#/trade';
+  if (state.view === 'tradeorders') return '#/trade/orders';
   if (state.view === 'brands') return '#/brands';
   if (state.view === 'brand') return '#/brands/' + state.brand;
   return '#/';
@@ -52,7 +53,7 @@ function fromHash() {
   if (a === 'about') return { view: 'about', ...product };
   if (a === 'volume') return { view: 'drop', ...product };
   if (a === 'volumes') return { view: 'drops', ...product };
-  if (a === 'trade') return { view: 'trade', ...product };
+  if (a === 'trade') return { view: b === 'orders' ? 'tradeorders' : 'trade', ...product };
   if (a === 'brands') return b ? { view: 'brand', brand: b, ...product } : { view: 'brands', ...product };
   return { view: 'home', ...product };
 }
@@ -237,7 +238,7 @@ function header(t) {
   ${state.b2b ? `<div class="tradebar"><span>${t.tradeNote}</span><span class="muted2">FOB INCHEON · DDP SINGAPORE</span></div>` : ''}`;
 }
 function navStyle(view) {
-  const active = view === state.view || (view === 'brands' && state.view === 'brand') || view === '__b2b' && state.b2b || view === '__lang';
+  const active = view === state.view || (view === 'brands' && state.view === 'brand') || (view === 'trade' && state.view === 'tradeorders') || view === '__b2b' && state.b2b || view === '__lang';
   return active ? 'color:#0B0B0C;text-decoration:underline;text-underline-offset:8px' : 'color:#7A7A78';
 }
 function cartCount() { return Object.keys(state.cart).filter(findProduct).reduce((a, id) => a + state.cart[id], 0); }
@@ -1019,6 +1020,7 @@ function render() {
   else if (state.view === 'drop') body = dropHtml(t);
   else if (state.view === 'drops') body = dropsArchiveHtml(t);
   else if (state.view === 'trade') body = tradeHtml(t);
+  else if (state.view === 'tradeorders') body = tradeOrdersHtml(t);
   else if (state.view === 'brands') body = brandsHtml(t);
   else if (state.view === 'brand') body = brandHtml(t);
   else if (state.view === 'mall') body = mallHtml(t);
