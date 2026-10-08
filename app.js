@@ -37,6 +37,7 @@ function pageHash() {
   if (state.view === 'about') return '#/about';
   if (state.view === 'drop') return '#/volume/' + VOLUME.no;
   if (state.view === 'drops') return '#/volumes';
+  if (state.view === 'trade') return '#/trade';
   if (state.view === 'brands') return '#/brands';
   if (state.view === 'brand') return '#/brands/' + state.brand;
   return '#/';
@@ -51,6 +52,7 @@ function fromHash() {
   if (a === 'about') return { view: 'about', ...product };
   if (a === 'volume') return { view: 'drop', ...product };
   if (a === 'volumes') return { view: 'drops', ...product };
+  if (a === 'trade') return { view: 'trade', ...product };
   if (a === 'brands') return b ? { view: 'brand', brand: b, ...product } : { view: 'brands', ...product };
   return { view: 'home', ...product };
 }
@@ -226,7 +228,7 @@ function header(t) {
       <img class="logo-mark logo-seal" src="assets/haemun-mark-seal.png" alt="" width="40" height="40"><img class="logo-word on-light" src="assets/haemun-wordmark.png" alt="Haemun" width="92" height="17"><img class="logo-word on-dark" src="assets/haemun-wordmark-white.png" alt="" width="92" height="17">
     </button>
     <div class="htools">
-      <button class="tlink" data-action="toggleTrade" style="${navStyle(state.b2b ? '__b2b' : '')}">${t.trade}</button>
+      <button class="tlink" data-action="nav" data-view="trade" style="${navStyle('trade')}">${t.trade}</button>
       <span class="lang"><button class="tlink" data-action="setLang" data-lang="en" style="${navStyle(state.lang === 'en' ? '__lang' : '')}">EN</button><span class="sep">/</span><button class="tlink" data-action="setLang" data-lang="ko" style="${navStyle(state.lang === 'ko' ? '__lang' : '')}">한</button></span>
       <button class="tlink" data-action="openSearch" aria-label="${t.search}"><svg class="ico" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M13 13l5 5" stroke="currentColor" stroke-width="1.4"/></svg><span class="s-label">${t.search}</span></button>
       <button class="tlink bagbtn" data-action="openCart">${t.bag} <span class="bagcount${state.bump ? ' bump' : ''}">${cartCount()}</span></button>
@@ -1016,6 +1018,7 @@ function render() {
   if (state.view === 'home') body = homeHtml(t);
   else if (state.view === 'drop') body = dropHtml(t);
   else if (state.view === 'drops') body = dropsArchiveHtml(t);
+  else if (state.view === 'trade') body = tradeHtml(t);
   else if (state.view === 'brands') body = brandsHtml(t);
   else if (state.view === 'brand') body = brandHtml(t);
   else if (state.view === 'mall') body = mallHtml(t);
@@ -1140,7 +1143,7 @@ document.addEventListener('click', (e) => {
   }
   else if (a === 'setJcat') setState({ jcat: el.dataset.jcat });
   else if (a === 'toggleTrade') setState({ b2b: !state.b2b });
-  else if (a === 'enableTrade') { setState({ b2b: true }); window.scrollTo(0, 0); }
+  else if (a === 'enableTrade') go({ view: 'trade' });
   else if (a === 'setLang') setState({ lang: el.dataset.lang });
   else if (a === 'scrollDrops') { const d = document.getElementById('drops'); if (d) window.scrollTo({ top: d.getBoundingClientRect().top + scrollY - 120, behavior: 'smooth' }); }
 });
